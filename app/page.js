@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v1";
+const APP_KEY = "kine-expert-roubaix-elite-v2";
 
 const initialPatient = {
   name: "",
@@ -45,12 +45,26 @@ const initialScores = {
   technique: 0,
   physical: 0,
   load: 0,
+
+  deepSquatLeft: 0,
+  deepSquatRight: 0,
+  ankleKneeWallLeft: 0,
+  ankleKneeWallRight: 0,
+  fingerFloor: 0,
+  calfRaiseLeft: 0,
+  calfRaiseRight: 0,
+  shortFootLeft: 0,
+  shortFootRight: 0,
+  singleLegSquatLeft: 0,
+  singleLegSquatRight: 0,
+  singleHopLeft: 0,
+  singleHopRight: 0,
 };
 
 const sections = [
   { id: "patient", title: "Patient" },
   { id: "anamnesis", title: "Anamnèse", max: 20 },
-  { id: "mobility", title: "Mobilité & contrôle", max: 20 },
+  { id: "mobility", title: "Mobilité & force", max: 20 },
   { id: "technique", title: "Technique de course", max: 25 },
   { id: "physical", title: "Capacités physiques", max: 20 },
   { id: "load", title: "Gestion de charge", max: 15 },
@@ -59,7 +73,7 @@ const sections = [
 
 const labels = {
   anamnesis: "Anamnèse",
-  mobility: "Mobilité & contrôle",
+  mobility: "Mobilité & force",
   technique: "Technique de course",
   physical: "Capacités physiques",
   load: "Gestion de charge",
@@ -83,11 +97,12 @@ function getLevel(total) {
 
 function buildRecommendations(scores) {
   const recos = [];
+
   if (scores.load <= 8) {
     recos.push("Sécuriser la charge : réduire les pics, stabiliser 2 à 3 semaines, reconstruire progressivement.");
   }
   if (scores.mobility <= 12) {
-    recos.push("Améliorer le contrôle et la mobilité : cheville, hanche et stabilité unipodale.");
+    recos.push("Améliorer la mobilité et la force : cheville, pied, triceps sural et contrôle unipodal.");
   }
   if (scores.technique <= 14) {
     recos.push("Améliorer l’économie de course : éducatifs, travail de pied, appuis réactifs.");
@@ -101,14 +116,23 @@ function buildRecommendations(scores) {
   if (recos.length === 0) {
     recos.push("Consolider les acquis et affiner la performance avec un suivi périodique.");
   }
+
   return recos.slice(0, 4);
 }
 
 function buildSynthesis(patient, scores, total) {
-  const ordered = Object.entries(scores).sort((a, b) => a[1] - b[1]);
+  const ordered = Object.entries({
+    anamnesis: scores.anamnesis,
+    mobility: scores.mobility,
+    technique: scores.technique,
+    physical: scores.physical,
+    load: scores.load,
+  }).sort((a, b) => a[1] - b[1]);
+
   const weakest = labels[ordered[0][0]].toLowerCase();
   const strongest = labels[[...ordered].sort((a, b) => b[1] - a[1])[0][0]].toLowerCase();
   const name = patient.name || "Le bilan";
+
   return `Le bilan de ${name} met en évidence un profil ${getLevel(total).label.toLowerCase()}. Le principal levier de progression concerne ${weakest}. Le point le plus solide concerne ${strongest}. L’objectif est de transformer ce bilan en plan d’action simple, progressif et mesurable sur les 4 à 8 prochaines semaines.`;
 }
 
@@ -120,7 +144,7 @@ function radarSvg(scores) {
   const radius = 95;
   const data = [
     { label: "Anamnèse", value: scores.anamnesis, max: 20, angle: -90 },
-    { label: "Mobilité", value: scores.mobility, max: 20, angle: -18 },
+    { label: "Mobilité & force", value: scores.mobility, max: 20, angle: -18 },
     { label: "Technique", value: scores.technique, max: 25, angle: 54 },
     { label: "Physique", value: scores.physical, max: 20, angle: 126 },
     { label: "Charge", value: scores.load, max: 15, angle: 198 },
@@ -161,7 +185,7 @@ function radarSvg(scores) {
     <polygon points="${poly}" fill="#e11d2e" fill-opacity="0.38" stroke="#e11d2e" stroke-width="2.5" />
     ${data
       .map((d) => {
-        const p = point(d.angle, radius + 28);
+        const p = point(d.angle, radius + 32);
         return `<text x="${p.x}" y="${p.y}" text-anchor="middle" font-size="12" fill="#d4d4d8" font-family="Arial, sans-serif">${d.label}</text>`;
       })
       .join("")}
@@ -170,6 +194,67 @@ function radarSvg(scores) {
 
 function scoreBar(current, max) {
   return `${(current / max) * 100}%`;
+}
+
+function testColor(score, max) {
+  const ratio = max ? score / max : 0;
+  if (ratio < 0.4) return "#dc2626";
+  if (ratio < 0.7) return "#f59e0b";
+  return "#16a34a";
+}
+
+function computeMobilityTotal(scores) {
+  return Math.round(
+    (((scores.deepSquatLeft + scores.deepSquatRight) / 2 +
+      (scores.ankleKneeWallLeft + scores.ankleKneeWallRight) / 2 +
+      scores.fingerFloor +
+      (scores.calfRaiseLeft + scores.calfRaiseRight) / 2 +
+      (scores.shortFootLeft + scores.shortFootRight) / 2 +
+      (scores.singleLegSquatLeft + scores.singleLegSquatRight) / 2 +
+      (scores.singleHopLeft + scores.singleHopRight) / 2) /
+      21) *
+      20
+  );
+}
+
+function symmetryText(left, right) {
+  const diff = Math.abs(left - right);
+  if (diff === 0) return "Symétrie excellente";
+  if (diff === 1) return "Légère asymétrie";
+  return "Asymétrie marquée";
+}
+
+function mobilityInterpretations(scores) {
+  const out = [];
+
+  if (Math.min(scores.ankleKneeWallLeft, scores.ankleKneeWallRight) <= 1) {
+    out.push("Déficit de mobilité de cheville : possible impact sur squat, absorption et contraintes distales.");
+  }
+  if (Math.min(scores.calfRaiseLeft, scores.calfRaiseRight) <= 1) {
+    out.push("Endurance/force du triceps sural insuffisante : à relier au risque tendon d’Achille et à la perte d’économie de course.");
+  }
+  if (Math.min(scores.shortFootLeft, scores.shortFootRight) <= 1) {
+    out.push("Contrôle actif du pied faible : travailler arche plantaire, stabilité et transmission des appuis.");
+  }
+  if (Math.min(scores.singleLegSquatLeft, scores.singleLegSquatRight) <= 1) {
+    out.push("Contrôle unipodal déficitaire : surveiller valgus, stabilité pelvienne et contrôle proximal.");
+  }
+  if (Math.min(scores.singleHopLeft, scores.singleHopRight) <= 1) {
+    out.push("Capacité de restitution/réactivité diminuée : à corréler avec la tolérance mécanique à la course.");
+  }
+  if (
+    Math.abs(scores.deepSquatLeft - scores.deepSquatRight) >= 2 ||
+    Math.abs(scores.singleLegSquatLeft - scores.singleLegSquatRight) >= 2 ||
+    Math.abs(scores.singleHopLeft - scores.singleHopRight) >= 2
+  ) {
+    out.push("Asymétrie G/D notable : à intégrer dans la stratégie de renforcement et la reprise de charge.");
+  }
+
+  if (out.length === 0) {
+    out.push("Profil mobilité/force globalement cohérent, sans déficit majeur mis en évidence sur cette batterie.");
+  }
+
+  return out;
 }
 
 export default function RunningClinicElite() {
@@ -192,10 +277,15 @@ export default function RunningClinicElite() {
     localStorage.setItem(APP_KEY, JSON.stringify(history));
   }, [history]);
 
-  const total = useMemo(() => Object.values(scores).reduce((a, b) => a + b, 0), [scores]);
+  const total = useMemo(
+    () => scores.anamnesis + scores.mobility + scores.technique + scores.physical + scores.load,
+    [scores]
+  );
+
   const level = useMemo(() => getLevel(total), [total]);
   const synthesis = useMemo(() => buildSynthesis(patient, scores, total), [patient, scores, total]);
   const recommendations = useMemo(() => buildRecommendations(scores), [scores]);
+  const mobilityNotes = useMemo(() => mobilityInterpretations(scores), [scores]);
 
   const bmi = useMemo(() => {
     const weight = Number(patient.weight);
@@ -212,6 +302,14 @@ export default function RunningClinicElite() {
 
   const handleScoreChange = (key, value) => {
     setScores((prev) => ({ ...prev, [key]: Number(value) }));
+  };
+
+  const handleMobilityTestChange = (key, value) => {
+    setScores((prev) => {
+      const next = { ...prev, [key]: Number(value) };
+      next.mobility = computeMobilityTotal(next);
+      return next;
+    });
   };
 
   const saveAssessment = () => {
@@ -239,8 +337,21 @@ export default function RunningClinicElite() {
   };
 
   const exportPDF = () => {
-    const weakest = labels[Object.entries(scores).sort((a, b) => a[1] - b[1])[0][0]];
-    const strongest = labels[Object.entries(scores).sort((a, b) => b[1] - a[1])[0][0]];
+    const weakest = labels[Object.entries({
+      anamnesis: scores.anamnesis,
+      mobility: scores.mobility,
+      technique: scores.technique,
+      physical: scores.physical,
+      load: scores.load,
+    }).sort((a, b) => a[1] - b[1])[0][0]];
+
+    const strongest = labels[Object.entries({
+      anamnesis: scores.anamnesis,
+      mobility: scores.mobility,
+      technique: scores.technique,
+      physical: scores.physical,
+      load: scores.load,
+    }).sort((a, b) => b[1] - a[1])[0][0]];
 
     const html = `
     <html>
@@ -354,7 +465,7 @@ export default function RunningClinicElite() {
                 <thead><tr><th>Domaine</th><th>Score</th></tr></thead>
                 <tbody>
                   <tr><td>Anamnèse</td><td>${scores.anamnesis}/20</td></tr>
-                  <tr><td>Mobilité & contrôle</td><td>${scores.mobility}/20</td></tr>
+                  <tr><td>Mobilité & force</td><td>${scores.mobility}/20</td></tr>
                   <tr><td>Technique de course</td><td>${scores.technique}/25</td></tr>
                   <tr><td>Capacités physiques</td><td>${scores.physical}/20</td></tr>
                   <tr><td>Gestion de charge</td><td>${scores.load}/15</td></tr>
@@ -427,6 +538,16 @@ export default function RunningClinicElite() {
     cursor: "pointer",
   });
 
+  const mobilityTests = [
+    { label: "Deep squat", left: "deepSquatLeft", right: "deepSquatRight", max: 3 },
+    { label: "Ankle knee to wall", left: "ankleKneeWallLeft", right: "ankleKneeWallRight", max: 3 },
+    { label: "Distance doigt/sol", single: "fingerFloor", max: 3 },
+    { label: "Single leg calf raise", left: "calfRaiseLeft", right: "calfRaiseRight", max: 3 },
+    { label: "Short foot test", left: "shortFootLeft", right: "shortFootRight", max: 3 },
+    { label: "Single leg squat", left: "singleLegSquatLeft", right: "singleLegSquatRight", max: 3 },
+    { label: "Single hop test", left: "singleHopLeft", right: "singleHopRight", max: 3 },
+  ];
+
   const renderMain = () => (
     <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18 }}>
       <div style={card}>
@@ -443,7 +564,9 @@ export default function RunningClinicElite() {
 
         <div style={{ marginTop: 16, borderTop: `1px solid ${BRAND.border}`, paddingTop: 16 }}>
           <div style={{ color: BRAND.muted, fontSize: 13 }}>Score actuel</div>
-          <div style={{ color: level.color, fontSize: 56, fontWeight: 900, lineHeight: 1, marginTop: 6 }}>{total}/100</div>
+          <div style={{ color: level.color, fontSize: 56, fontWeight: 900, lineHeight: 1, marginTop: 6 }}>
+            {total}/100
+          </div>
           <div style={{ marginTop: 8, fontSize: 22, fontWeight: 800 }}>{level.label}</div>
         </div>
       </div>
@@ -461,42 +584,12 @@ export default function RunningClinicElite() {
             <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 16 }}>Identité & contexte</div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <input
-                value={patient.name}
-                onChange={(e) => handlePatientChange("name", e.target.value)}
-                placeholder="Nom du patient"
-                style={inputStyle}
-              />
-              <input
-                value={patient.age}
-                onChange={(e) => handlePatientChange("age", e.target.value)}
-                placeholder="Âge"
-                style={inputStyle}
-              />
-              <input
-                value={patient.weight}
-                onChange={(e) => handlePatientChange("weight", e.target.value)}
-                placeholder="Poids (kg)"
-                style={inputStyle}
-              />
-              <input
-                value={patient.height}
-                onChange={(e) => handlePatientChange("height", e.target.value)}
-                placeholder="Taille (cm)"
-                style={inputStyle}
-              />
-              <input
-                value={bmi}
-                readOnly
-                placeholder="IMC"
-                style={{ ...inputStyle, opacity: 0.8 }}
-              />
-              <input
-                value={patient.job}
-                onChange={(e) => handlePatientChange("job", e.target.value)}
-                placeholder="Métier"
-                style={inputStyle}
-              />
+              <input value={patient.name} onChange={(e) => handlePatientChange("name", e.target.value)} placeholder="Nom du patient" style={inputStyle} />
+              <input value={patient.age} onChange={(e) => handlePatientChange("age", e.target.value)} placeholder="Âge" style={inputStyle} />
+              <input value={patient.weight} onChange={(e) => handlePatientChange("weight", e.target.value)} placeholder="Poids (kg)" style={inputStyle} />
+              <input value={patient.height} onChange={(e) => handlePatientChange("height", e.target.value)} placeholder="Taille (cm)" style={inputStyle} />
+              <input value={bmi} readOnly placeholder="IMC" style={{ ...inputStyle, opacity: 0.8 }} />
+              <input value={patient.job} onChange={(e) => handlePatientChange("job", e.target.value)} placeholder="Métier" style={inputStyle} />
             </div>
 
             <div style={{ marginTop: 14 }}>
@@ -526,71 +619,21 @@ export default function RunningClinicElite() {
             <div style={{ fontSize: 22, fontWeight: 900, marginTop: 24, marginBottom: 16 }}>Profil course à pied</div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <input
-                value={patient.objective}
-                onChange={(e) => handlePatientChange("objective", e.target.value)}
-                placeholder="Objectif sportif"
-                style={inputStyle}
-              />
-              <input
-                value={patient.eventDate}
-                onChange={(e) => handlePatientChange("eventDate", e.target.value)}
-                placeholder="Date objectif"
-                style={inputStyle}
-              />
-              <input
-                value={patient.weeklyKm}
-                onChange={(e) => handlePatientChange("weeklyKm", e.target.value)}
-                placeholder="Km / semaine"
-                style={inputStyle}
-              />
-              <input
-                value={patient.sessionsPerWeek}
-                onChange={(e) => handlePatientChange("sessionsPerWeek", e.target.value)}
-                placeholder="Séances / semaine"
-                style={inputStyle}
-              />
-              <input
-                value={patient.level}
-                onChange={(e) => handlePatientChange("level", e.target.value)}
-                placeholder="Niveau / expérience"
-                style={inputStyle}
-              />
-              <input
-                value={patient.favoriteDistance}
-                onChange={(e) => handlePatientChange("favoriteDistance", e.target.value)}
-                placeholder="Distance favorite"
-                style={inputStyle}
-              />
+              <input value={patient.objective} onChange={(e) => handlePatientChange("objective", e.target.value)} placeholder="Objectif sportif" style={inputStyle} />
+              <input value={patient.eventDate} onChange={(e) => handlePatientChange("eventDate", e.target.value)} placeholder="Date objectif" style={inputStyle} />
+              <input value={patient.weeklyKm} onChange={(e) => handlePatientChange("weeklyKm", e.target.value)} placeholder="Km / semaine" style={inputStyle} />
+              <input value={patient.sessionsPerWeek} onChange={(e) => handlePatientChange("sessionsPerWeek", e.target.value)} placeholder="Séances / semaine" style={inputStyle} />
+              <input value={patient.level} onChange={(e) => handlePatientChange("level", e.target.value)} placeholder="Niveau / expérience" style={inputStyle} />
+              <input value={patient.favoriteDistance} onChange={(e) => handlePatientChange("favoriteDistance", e.target.value)} placeholder="Distance favorite" style={inputStyle} />
             </div>
 
             <div style={{ fontSize: 22, fontWeight: 900, marginTop: 24, marginBottom: 16 }}>Contexte clinique</div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <input
-                value={patient.painZone}
-                onChange={(e) => handlePatientChange("painZone", e.target.value)}
-                placeholder="Zone douloureuse"
-                style={inputStyle}
-              />
-              <input
-                value={patient.painLevel}
-                onChange={(e) => handlePatientChange("painLevel", e.target.value)}
-                placeholder="Douleur /10"
-                style={inputStyle}
-              />
-              <input
-                value={patient.shoes}
-                onChange={(e) => handlePatientChange("shoes", e.target.value)}
-                placeholder="Chaussures / rotation"
-                style={inputStyle}
-              />
-              <input
-                value={patient.surface}
-                onChange={(e) => handlePatientChange("surface", e.target.value)}
-                placeholder="Terrain habituel"
-                style={inputStyle}
-              />
+              <input value={patient.painZone} onChange={(e) => handlePatientChange("painZone", e.target.value)} placeholder="Zone douloureuse" style={inputStyle} />
+              <input value={patient.painLevel} onChange={(e) => handlePatientChange("painLevel", e.target.value)} placeholder="Douleur /10" style={inputStyle} />
+              <input value={patient.shoes} onChange={(e) => handlePatientChange("shoes", e.target.value)} placeholder="Chaussures / rotation" style={inputStyle} />
+              <input value={patient.surface} onChange={(e) => handlePatientChange("surface", e.target.value)} placeholder="Terrain habituel" style={inputStyle} />
             </div>
 
             <div style={{ marginTop: 18 }}>
@@ -615,10 +658,159 @@ export default function RunningClinicElite() {
           </div>
         )}
 
-        {step > 0 && step < 6 && (
+        {step === 2 && (
+          <div style={card}>
+            <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Tests mobilité & force</div>
+            <div style={{ color: BRAND.muted, marginBottom: 16, fontSize: 14 }}>
+              Notation par test de 0 à 3, avec lecture de la symétrie gauche / droite.
+            </div>
+
+            {mobilityTests.map((test) => {
+              const leftValue = test.left ? scores[test.left] : null;
+              const rightValue = test.right ? scores[test.right] : null;
+              const singleValue = test.single ? scores[test.single] : null;
+              const meanScore = test.single
+                ? singleValue
+                : Math.round((((leftValue || 0) + (rightValue || 0)) / 2) * 10) / 10;
+              const color = testColor(meanScore, test.max);
+
+              return (
+                <div
+                  key={test.label}
+                  style={{
+                    background: BRAND.panel2,
+                    border: `1px solid ${BRAND.border}`,
+                    borderRadius: 20,
+                    padding: 16,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}>
+                    <div style={{ fontWeight: 900, fontSize: 17 }}>{test.label}</div>
+                    <div
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 999,
+                        background: color,
+                        color: "white",
+                        fontWeight: 800,
+                        fontSize: 13,
+                      }}
+                    >
+                      {meanScore}/{test.max}
+                    </div>
+                  </div>
+
+                  {test.single ? (
+                    <div>
+                      <input
+                        type="range"
+                        min="0"
+                        max={test.max}
+                        value={singleValue}
+                        onChange={(e) => handleMobilityTestChange(test.single, e.target.value)}
+                        style={{ width: "100%", accentColor: BRAND.red }}
+                      />
+                      <div style={{ marginTop: 8, fontWeight: 800 }}>{singleValue}/{test.max}</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      <div>
+                        <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Gauche</div>
+                        <input
+                          type="range"
+                          min="0"
+                          max={test.max}
+                          value={leftValue}
+                          onChange={(e) => handleMobilityTestChange(test.left, e.target.value)}
+                          style={{ width: "100%", accentColor: BRAND.red }}
+                        />
+                        <div style={{ marginTop: 8, fontWeight: 800 }}>{leftValue}/{test.max}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite</div>
+                        <input
+                          type="range"
+                          min="0"
+                          max={test.max}
+                          value={rightValue}
+                          onChange={(e) => handleMobilityTestChange(test.right, e.target.value)}
+                          style={{ width: "100%", accentColor: BRAND.red }}
+                        />
+                        <div style={{ marginTop: 8, fontWeight: 800 }}>{rightValue}/{test.max}</div>
+                      </div>
+
+                      <div
+                        style={{
+                          gridColumn: "1 / -1",
+                          color: Math.abs((leftValue || 0) - (rightValue || 0)) >= 2 ? BRAND.red : BRAND.muted,
+                          fontSize: 13,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {symmetryText(leftValue || 0, rightValue || 0)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div
+              style={{
+                marginTop: 18,
+                padding: 16,
+                borderRadius: 20,
+                border: `1px solid ${BRAND.border}`,
+                background: "rgba(255,255,255,0.02)",
+              }}
+            >
+              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Score mobilité & force</div>
+              <div style={{ fontSize: 42, fontWeight: 900, color: BRAND.text }}>{scores.mobility}/20</div>
+              <div style={{ width: "100%", height: 12, background: "#222", borderRadius: 999, overflow: "hidden", marginTop: 10 }}>
+                <div
+                  style={{
+                    width: `${(scores.mobility / 20) * 100}%`,
+                    height: "100%",
+                    background: BRAND.red,
+                    borderRadius: 999,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+              {mobilityNotes.map((note, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: BRAND.panel,
+                    border: `1px solid ${BRAND.border}`,
+                    borderRadius: 16,
+                    padding: 14,
+                    color: BRAND.text,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {note}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step > 0 && step < 6 && step !== 2 && (
           <div style={card}>
             <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 14 }}>{sections[step].title}</div>
-            <div style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16 }}>
+            <div
+              style={{
+                background: BRAND.panel2,
+                border: `1px solid ${BRAND.border}`,
+                borderRadius: 20,
+                padding: 16,
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
                 <span style={{ fontWeight: 800 }}>{sections[step].title}</span>
                 <span style={{ color: BRAND.red, fontWeight: 900 }}>{scores[sections[step].id]}/{sections[step].max}</span>
@@ -642,6 +834,7 @@ export default function RunningClinicElite() {
                 <div style={{ color: BRAND.muted, fontSize: 14 }}>Restitution finale</div>
                 <div style={{ fontSize: 34, fontWeight: 900, marginTop: 8 }}>{patient.name || "Nom patient"}</div>
                 <div style={{ color: BRAND.muted, fontSize: 18, marginTop: 8 }}>{patient.objective || "Objectif"}</div>
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 18 }}>
                   <div style={miniCard}>
                     <div style={miniLabel}>Score global</div>
@@ -660,7 +853,9 @@ export default function RunningClinicElite() {
 
               <div style={card}>
                 <div style={{ fontSize: 18, fontWeight: 900 }}>Radar clinique</div>
-                <div style={{ color: BRAND.muted, fontSize: 14, marginTop: 8 }}>Support visuel premium pour la restitution patient</div>
+                <div style={{ color: BRAND.muted, fontSize: 14, marginTop: 8 }}>
+                  Support visuel premium pour la restitution patient
+                </div>
                 <div dangerouslySetInnerHTML={{ __html: radarSvg(scores) }} style={{ marginTop: 8 }} />
               </div>
             </div>
@@ -738,7 +933,16 @@ export default function RunningClinicElite() {
       }}
     >
       <div style={{ maxWidth: 1480, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 20,
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            marginBottom: 20,
+          }}
+        >
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: 0.3 }}>KINÉ EXPERT ROUBAIX</div>
             <div style={{ fontSize: 56, fontWeight: 900, lineHeight: 1.05, marginTop: 10 }}>
@@ -748,6 +952,7 @@ export default function RunningClinicElite() {
               Saisie tactile, scoring intelligent, restitution premium et historique patient
             </div>
           </div>
+
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <button onClick={resetAssessment} style={topBtn(false)}>Nouveau bilan</button>
             <button onClick={saveAssessment} style={topBtn(false)}>Enregistrer</button>
