@@ -17,9 +17,16 @@ const BRAND = {
   orange: "#f59e0b",
 };
 
+
 const initialPatient = {
   firstName: "",
   lastName: "",
+  age: "",
+  weight: "",
+  height: "",
+  sex: "",
+  job: "",
+  runningHistory: "",
   objective: "",
   eventDate: "",
   weeklyKm: "",
@@ -27,7 +34,7 @@ const initialPatient = {
   painZone: "",
   painLevel: "",
   shoes: "",
-  notes: "",
+  notes: "",  
 };
 
 const initialScores = {
@@ -881,7 +888,14 @@ export default function Page() {
               placeholder="Ex : Novablast, Vaporfly..."
             />
           </div>
-
+<div style={{ marginTop: 16 }}>
+  <TextAreaField
+    label="Historique de course"
+    value={patient.runningHistory}
+    onChange={(e) => setPatient({ ...patient, runningHistory: e.target.value })}
+    placeholder="Ancienneté en course à pied, distances habituelles, niveau, fréquence, antécédents sportifs..."
+  />
+</div>
           <div style={{ marginTop: 16 }}>
             <TextAreaField
               label="Notes cliniques"
