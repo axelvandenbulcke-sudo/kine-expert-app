@@ -48,7 +48,7 @@ const initialScores = {
 const sections = [
   { id: "patient", title: "Patient" },
   { id: "anamnesis", title: "Anamnèse", max: 20 },
-  { id: "mobility", title: "Mobilité & contrôle", max: 20 },
+  { id: "mobility", title: "Mobilité", max: 20 },
   { id: "technique", title: "Technique de course", max: 25 },
   { id: "physical", title: "Capacités physiques", max: 20 },
   { id: "load", title: "Gestion de charge", max: 15 },
@@ -57,7 +57,7 @@ const sections = [
 
 const labels = {
   anamnesis: "Anamnèse",
-  mobility: "Mobilité & contrôle",
+  mobility: "Mobilité",
   technique: "Technique de course",
   physical: "Capacités physiques",
   load: "Gestion de charge",
@@ -409,98 +409,193 @@ export default function RunningClinicElite() {
             <textarea value={patient.notes} onChange={(e) => handlePatientChange("notes", e.target.value)} placeholder="Notes complémentaires" style={{ ...inputStyle, minHeight: 120, marginTop: 14, width: "100%", resize: "vertical" }} />
           </div>
         )}
+       
+               {step === 2 && (
+  <div style={card}>
+    <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Tests mobilité</div>
+    <div style={{ color: BRAND.muted, marginBottom: 16, fontSize: 14 }}>
+      Notation par test de 0 à 3, avec lecture de la symétrie gauche / droite.
+    </div>
 
-        {step === 2 && (
-          <div style={card}>
-            <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Tests mobilité & force</div>
-            <div style={{ color: BRAND.muted, marginBottom: 16, fontSize: 14 }}>Notation par test de 0 à 3, avec lecture de la symétrie gauche / droite.</div>
+    {mobilityTests.map((test) => {
+      const leftValue = test.left ? scores[test.left] : null;
+      const rightValue = test.right ? scores[test.right] : null;
+      const singleValue = test.single ? scores[test.single] : null;
 
-            {[
-              { label: "Deep squat", left: "deepSquatLeft", right: "deepSquatRight", max: 3 },
-              { label: "Ankle knee to wall", left: "ankleKneeWallLeft", right: "ankleKneeWallRight", max: 3 },
-              { label: "Distance doigt/sol", single: "fingerFloor", max: 3 },
-              { label: "Single leg calf raise", left: "calfRaiseLeft", right: "calfRaiseRight", max: 3 },
-              { label: "Short foot test", left: "shortFootLeft", right: "shortFootRight", max: 3 },
-              { label: "Single leg squat", left: "singleLegSquatLeft", right: "singleLegSquatRight", max: 3 },
-              { label: "Single hop test", left: "singleHopLeft", right: "singleHopRight", max: 3 },
-            ].map((test) => {
-              const leftValue = test.left ? scores[test.left] : null;
-              const rightValue = test.right ? scores[test.right] : null;
-              const singleValue = test.single ? scores[test.single] : null;
-              const color = test.single ? testColor(singleValue, test.max) : testColor(((leftValue || 0) + (rightValue || 0)) / 2, test.max);
+      const meanScore = test.single
+        ? singleValue
+        : Math.round((((leftValue || 0) + (rightValue || 0)) / 2) * 10) / 10;
 
-              return (
-                <div key={test.label} style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}>
-                    <div style={{ fontWeight: 900, fontSize: 17 }}>{test.label}</div>
-                    <div style={{ padding: "8px 12px", borderRadius: 999, background: color, color: "white", fontWeight: 800, fontSize: 13 }}>
-                      {test.single ? `${singleValue}/${test.max}` : `${Math.round((((leftValue || 0) + (rightValue || 0)) / 2) * 10) / 10}/${test.max}`}
-                    </div>
-                  </div>
+      const color = testColor(meanScore, test.max);
 
-                  {test.single ? (
-                    <div>
-                      <input
-                        type="range"
-                        min="0"
-                        max={test.max}
-                        value={singleValue}
-                        onChange={(e) => handleMobilityTestChange(test.single, e.target.value)}
-                        style={{ width: "100%", accentColor: BRAND.red }}
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div>
-                        <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Gauche</div>
-                        <input
-                          type="range"
-                          min="0"
-                          max={test.max}
-                          value={leftValue}
-                          onChange={(e) => handleMobilityTestChange(test.left, e.target.value)}
-                          style={{ width: "100%", accentColor: BRAND.red }}
-                        />
-                        <div style={{ marginTop: 8, fontWeight: 800 }}>{leftValue}/{test.max}</div>
-                      </div>
-                      <div>
-                        <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite</div>
-                        <input
-                          type="range"
-                          min="0"
-                          max={test.max}
-                          value={rightValue}
-                          onChange={(e) => handleMobilityTestChange(test.right, e.target.value)}
-                          style={{ width: "100%", accentColor: BRAND.red }}
-                        />
-                        <div style={{ marginTop: 8, fontWeight: 800 }}>{rightValue}/{test.max}</div>
-                      </div>
-                      <div style={{ gridColumn: "1 / -1", color: Math.abs((leftValue || 0) - (rightValue || 0)) >= 2 ? BRAND.red : BRAND.muted, fontSize: 13, fontWeight: 700 }}>
-                        {symmetryText(leftValue || 0, rightValue || 0)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      return (
+        <div
+          key={test.label}
+          style={{
+            background: BRAND.panel2,
+            border: `1px solid ${BRAND.border}`,
+            borderRadius: 20,
+            padding: 16,
+            marginBottom: 12,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "center",
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ fontWeight: 900, fontSize: 17 }}>{test.label}</div>
 
-            <div style={{ marginTop: 18, padding: 16, borderRadius: 20, border: `1px solid ${BRAND.border}`, background: "rgba(255,255,255,0.02)" }}>
-              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Score mobilité & force</div>
-              <div style={{ fontSize: 42, fontWeight: 900, color: level.color }}>{scores.mobility}/20</div>
-              <div style={{ width: "100%", height: 12, background: "#222", borderRadius: 999, overflow: "hidden", marginTop: 10 }}>
-                <div style={{ width: `${(scores.mobility / 20) * 100}%`, height: "100%", background: BRAND.red, borderRadius: 999 }} />
-              </div>
-            </div>
-
-            <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
-              {mobilityNotes.map((note, i) => (
-                <div key={i} style={{ background: BRAND.panel, border: `1px solid ${BRAND.border}`, borderRadius: 16, padding: 14, color: BRAND.text, lineHeight: 1.5 }}>
-                  {note}
-                </div>
-              ))}
+            <div
+              style={{
+                padding: "8px 12px",
+                borderRadius: 999,
+                background: color,
+                color: "white",
+                fontWeight: 800,
+                fontSize: 13,
+              }}
+            >
+              {meanScore}/{test.max}
             </div>
           </div>
-        )}
+
+          {test.single ? (
+            <div>
+              <input
+                type="range"
+                min="0"
+                max={test.max}
+                value={singleValue}
+                onChange={(e) => handleMobilityTestChange(test.single, e.target.value)}
+                style={{ width: "100%", accentColor: BRAND.red }}
+              />
+              <div style={{ marginTop: 8, fontWeight: 800 }}>
+                {singleValue}/{test.max}
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Gauche</div>
+                <input
+                  type="range"
+                  min="0"
+                  max={test.max}
+                  value={leftValue}
+                  onChange={(e) => handleMobilityTestChange(test.left, e.target.value)}
+                  style={{ width: "100%", accentColor: BRAND.red }}
+                />
+                <div style={{ marginTop: 8, fontWeight: 800 }}>
+                  {leftValue}/{test.max}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite</div>
+                <input
+                  type="range"
+                  min="0"
+                  max={test.max}
+                  value={rightValue}
+                  onChange={(e) => handleMobilityTestChange(test.right, e.target.value)}
+                  style={{ width: "100%", accentColor: BRAND.red }}
+                />
+                <div style={{ marginTop: 8, fontWeight: 800 }}>
+                  {rightValue}/{test.max}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  color: Math.abs((leftValue || 0) - (rightValue || 0)) >= 2 ? BRAND.red : BRAND.muted,
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                {symmetryText(leftValue || 0, rightValue || 0)}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    })}
+
+    <div
+      style={{
+        marginTop: 18,
+        padding: 16,
+        borderRadius: 20,
+        border: `1px solid ${BRAND.border}`,
+        background: "rgba(255,255,255,0.02)",
+      }}
+    >
+      <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Score mobilité</div>
+      <div style={{ fontSize: 42, fontWeight: 900, color: BRAND.text }}>{scores.mobility}/20</div>
+      <div
+        style={{
+          width: "100%",
+          height: 12,
+          background: "#222",
+          borderRadius: 999,
+          overflow: "hidden",
+          marginTop: 10,
+        }}
+      >
+        <div
+          style={{
+            width: `${(scores.mobility / 20) * 100}%`,
+            height: "100%",
+            background: BRAND.red,
+            borderRadius: 999,
+          }}
+        />
+      </div>
+    </div>
+
+    <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+      {mobilityNotes.map((note, i) => (
+        <div
+          key={i}
+          style={{
+            background: BRAND.panel,
+            border: `1px solid ${BRAND.border}`,
+            borderRadius: 16,
+            padding: 14,
+            color: BRAND.text,
+            lineHeight: 1.5,
+          }}
+        >
+          {note}
+        </div>
+      ))}
+    </div>
+
+    <div style={{ marginTop: 16 }}>
+      <div
+        style={{
+          color: BRAND.muted,
+          fontSize: 14,
+          marginBottom: 10,
+          fontWeight: 700,
+        }}
+      >
+        Note complémentaire
+      </div>
+      <textarea
+        value={patient.mobilityNote}
+        onChange={(e) => handlePatientChange("mobilityNote", e.target.value)}
+        placeholder="Observation clinique libre : asymétries, compensations, douleur, qualité de contrôle, remarques spécifiques..."
+        style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
+      />
+    </div>
+  </div>
+)}
 
         {step > 0 && step < 6 && step !== 2 && (
           <div style={card}>
