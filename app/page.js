@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v6";
+const APP_KEY = "kine-expert-roubaix-elite-v8";
 
 const initialPatient = {
   name: "",
@@ -38,6 +38,7 @@ const initialPatient = {
   surface: "",
   mobilityNote: "",
   forceNote: "",
+  techniqueNote: "",
   notes: "",
 };
 
@@ -84,6 +85,12 @@ const initialScores = {
   fibNote: 0,
   tibPostNote: 0,
   flex1Note: 0,
+
+  cadence: 0,
+  oscillation: 0,
+  bruit: 0,
+  overstride: 0,
+  stabiliteBassin: 0,
 };
 
 const sections = [
@@ -219,6 +226,17 @@ function computeSmartForceTotal(scores) {
   return Math.round((total / 35) * 20);
 }
 
+function computeTechniqueTotal(scores) {
+  const totalRaw =
+    Number(scores.cadence || 0) +
+    Number(scores.oscillation || 0) +
+    Number(scores.bruit || 0) +
+    Number(scores.overstride || 0) +
+    Number(scores.stabiliteBassin || 0);
+
+  return Math.round((totalRaw / 25) * 25);
+}
+
 function mobilityInterpretations(scores) {
   const out = [];
 
@@ -254,7 +272,6 @@ function mobilityInterpretations(scores) {
 
 function buildForceInterpretation(scores) {
   const notes = [];
-
   const quadAvg = (scores.quadLeft + scores.quadRight) / 2;
   const hamAvg = (scores.hamLeft + scores.hamRight) / 2;
   const ratio = quadAvg > 0 ? hamAvg / quadAvg : 0;
@@ -316,12 +333,38 @@ function buildForceRecommendations(scores) {
   return recos.slice(0, 6);
 }
 
+function buildTechniqueInterpretation(scores) {
+  const notes = [];
+
+  if (scores.cadence <= 2) notes.push("Cadence faible : overstride probable et contraintes mécaniques potentiellement augmentées.");
+  else if (scores.cadence <= 4) notes.push("Cadence correcte mais encore améliorable.");
+  else notes.push("Cadence optimale : profil favorable à l’économie de course.");
+
+  if (scores.oscillation <= 2) notes.push("Oscillation verticale excessive : perte d’énergie et coût mécanique majoré.");
+  else if (scores.oscillation <= 4) notes.push("Oscillation verticale correcte.");
+  else notes.push("Très bonne économie de course sur le plan vertical.");
+
+  if (scores.bruit <= 2) notes.push("Impact sonore élevé : contraintes d’impact probablement importantes.");
+  else if (scores.bruit <= 4) notes.push("Impact au sol modéré.");
+  else notes.push("Course silencieuse : bonne absorption active et qualité d’appui.");
+
+  if (scores.overstride <= 2) notes.push("Overstride marqué : freinage accru et augmentation probable des contraintes mécaniques.");
+  else if (scores.overstride <= 4) notes.push("Placement du pied globalement correct mais perfectible.");
+  else notes.push("Placement du pied efficace, avec faible tendance au sur-allongement de foulée.");
+
+  if (scores.stabiliteBassin <= 2) notes.push("Stabilité du bassin insuffisante : possible déficit de contrôle proximal.");
+  else if (scores.stabiliteBassin <= 4) notes.push("Stabilité pelvienne correcte.");
+  else notes.push("Très bon contrôle du bassin pendant la course.");
+
+  return notes;
+}
+
 function buildRecommendations(scores) {
   const recos = [];
 
   if (scores.load <= 8) recos.push("Sécuriser la charge : réduire les pics, stabiliser 2 à 3 semaines, reconstruire progressivement.");
   if (scores.mobility <= 12) recos.push("Améliorer la mobilité globale et le contrôle distal : cheville, pied, stabilité unipodale et qualité d’appui.");
-  if (scores.technique <= 14) recos.push("Améliorer l’économie de course : éducatifs, travail de pied, appuis réactifs et légère augmentation de cadence.");
+  if (scores.technique <= 16) recos.push("Améliorer la technique : cadence, réduction de l’oscillation verticale, diminution du bruit à l’impact, contrôle de l’overstride et stabilité pelvienne.");
   if (scores.physical <= 14) recos.push("Renforcer les groupes clés de propulsion et de contrôle : quadriceps, ischios, abducteurs, adducteurs, pied-cheville.");
   if (scores.anamnesis <= 12) recos.push("Surveiller le risque de récidive : progression prudente, douleur tolérable et recontrôle régulier.");
 
@@ -335,7 +378,7 @@ function buildAutoPlan(patient, scores) {
 
   if (scores.load <= 9) plan.push("Charge : stabiliser 2 semaines, éviter tout pic brutal, augmenter ensuite de façon progressive et tolérable.");
   if (scores.mobility <= 13) plan.push("Mobilité : 2 à 3 blocs/semaine cheville, pied, mollets et contrôle unipodal, priorité au côté le plus faible.");
-  if (scores.technique <= 15) plan.push("Technique : intégrer 6 à 10 minutes d’éducatifs, cadence, travail d’appuis et posture sur 2 séances/semaine.");
+  if (scores.technique <= 16) plan.push("Technique : intégrer un travail ciblé sur cadence, limitation du rebond vertical, réduction de l’overstride et stabilité du bassin sur 2 séances/semaine.");
   if (scores.physical <= 13) plan.push("Force : 2 séances/semaine avec focus quadriceps, ischios, abducteurs, adducteurs, pied-cheville et progression simple.");
   plan.push(`Course : maintenir ${patient.sessionsPerWeek || "2 à 3"} séances/semaine avec une séance facile, une séance qualitative légère et une sortie longue si tolérée.`);
 
@@ -360,7 +403,7 @@ function computeInjuryRisk(patient, scores) {
   else if (scores.physical <= 13) risk += 8;
 
   if (scores.technique <= 12) risk += 10;
-  else if (scores.technique <= 15) risk += 5;
+  else if (scores.technique <= 16) risk += 5;
 
   const asymmetryCount = [
     asymmetryPercent(scores.deepSquatLeft, scores.deepSquatRight) >= 20,
@@ -487,6 +530,7 @@ export default function RunningClinicElite() {
   const autoPlan = useMemo(() => buildAutoPlan(patient, scores), [patient, scores]);
   const forceInterpretation = useMemo(() => buildForceInterpretation(scores), [scores]);
   const forceRecommendations = useMemo(() => buildForceRecommendations(scores), [scores]);
+  const techniqueNotes = useMemo(() => buildTechniqueInterpretation(scores), [scores]);
 
   const quadAvg = useMemo(() => (scores.quadLeft + scores.quadRight) / 2, [scores.quadLeft, scores.quadRight]);
   const hamAvg = useMemo(() => (scores.hamLeft + scores.hamRight) / 2, [scores.hamLeft, scores.hamRight]);
@@ -529,6 +573,14 @@ export default function RunningClinicElite() {
     setScores((prev) => {
       const next = { ...prev, [key]: Number(value) };
       next.physical = computeSmartForceTotal(next);
+      return next;
+    });
+  };
+
+  const handleTechniqueChange = (key, value) => {
+    setScores((prev) => {
+      const next = { ...prev, [key]: Number(value) };
+      next.technique = computeTechniqueTotal(next);
       return next;
     });
   };
@@ -673,12 +725,15 @@ export default function RunningClinicElite() {
             </table>
           </div>
 
+          <div class="card"><h2>Interprétation force</h2><ul>${forceInterpretation.map((item) => `<li>${item}</li>`).join("")}</ul></div>
+          <div class="card"><h2>Interprétation technique</h2><ul>${techniqueNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations</h2><ul>${recommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations force</h2><ul>${forceRecommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Plan automatique</h2><ul>${autoPlan.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Historique de course</h2><p>${patient.runningHistory || "Non renseigné."}</p></div>
           <div class="card"><h2>Note complémentaire mobilité</h2><p>${patient.mobilityNote || "Aucune note."}</p></div>
           <div class="card"><h2>Note complémentaire force</h2><p>${patient.forceNote || "Aucune note."}</p></div>
+          <div class="card"><h2>Note complémentaire technique</h2><p>${patient.techniqueNote || "Aucune note."}</p></div>
           <div class="card"><h2>Notes complémentaires</h2><p>${patient.notes || "Aucune note."}</p></div>
 
           <div class="footer">Document généré par Kiné Expert Roubaix</div>
@@ -725,16 +780,54 @@ export default function RunningClinicElite() {
     cursor: "pointer",
   });
 
+  const boxStyle = {
+    background: BRAND.panel2,
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    border: `1px solid ${BRAND.border}`,
+  };
+
+  const titleStyle = {
+    fontWeight: 900,
+    marginBottom: 8,
+  };
+
+  const interpretStyle = {
+    marginTop: 8,
+    color: BRAND.muted,
+    fontSize: 14,
+    lineHeight: 1.5,
+  };
+
+  const scoreText = {
+    marginTop: 8,
+    fontWeight: 800,
+  };
+
+  const sliderStyle = {
+    width: "100%",
+    accentColor: BRAND.red,
+  };
+
+  const cardScore = {
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 20,
+    background: BRAND.panel,
+    border: `1px solid ${BRAND.border}`,
+  };
+
   const renderMain = () => (
     <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18 }}>
       <div style={card}>
         <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 14 }}>Parcours bilan</div>
         {sections.map((section, index) => {
-          const scoreText = section.max ? `${scores[section.id] || 0}/${section.max}` : "";
+          const scoreTextDisplay = section.max ? `${scores[section.id] || 0}/${section.max}` : "";
           return (
             <button key={section.id} onClick={() => setStep(index)} style={navItem(step === index)}>
               <div style={{ fontWeight: 900, fontSize: 16 }}>{section.title}</div>
-              {section.max ? <div style={{ fontSize: 13, color: BRAND.muted, marginTop: 6 }}>{scoreText}</div> : null}
+              {section.max ? <div style={{ fontSize: 13, color: BRAND.muted, marginTop: 6 }}>{scoreTextDisplay}</div> : null}
             </button>
           );
         })}
@@ -857,11 +950,13 @@ export default function RunningClinicElite() {
                         <input type="range" min="0" max={test.max} value={leftValue} onChange={(e) => handleMobilityTestChange(test.left, e.target.value)} style={{ width: "100%", accentColor: BRAND.red }} />
                         <div style={{ marginTop: 8, fontWeight: 800 }}>{leftValue}/{test.max}</div>
                       </div>
+
                       <div>
                         <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite</div>
                         <input type="range" min="0" max={test.max} value={rightValue} onChange={(e) => handleMobilityTestChange(test.right, e.target.value)} style={{ width: "100%", accentColor: BRAND.red }} />
                         <div style={{ marginTop: 8, fontWeight: 800 }}>{rightValue}/{test.max}</div>
                       </div>
+
                       <div style={{ gridColumn: "1 / -1", color: Math.abs((leftValue || 0) - (rightValue || 0)) >= 2 ? BRAND.red : BRAND.muted, fontSize: 13, fontWeight: 700 }}>
                         {symmetryText(leftValue || 0, rightValue || 0)}
                       </div>
@@ -996,7 +1091,106 @@ export default function RunningClinicElite() {
           </div>
         )}
 
-        {step > 0 && step < 6 && step !== 2 && step !== 3 && (
+        {step === 4 && (
+          <div style={card}>
+            <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Analyse technique de course</div>
+            <div style={{ color: BRAND.muted, marginBottom: 16 }}>
+              Analyse clinique simple basée sur observation vidéo ou terrain.
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Cadence</div>
+              <input type="range" min="0" max="5" value={scores.cadence || 0} onChange={(e) => handleTechniqueChange("cadence", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.cadence || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.cadence <= 2 && "Cadence faible → overstride probable, augmentation des contraintes mécaniques"}
+                {scores.cadence >= 3 && scores.cadence <= 4 && "Cadence correcte mais améliorable"}
+                {scores.cadence === 5 && "Cadence optimale → économie de course"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Oscillation verticale</div>
+              <input type="range" min="0" max="5" value={scores.oscillation || 0} onChange={(e) => handleTechniqueChange("oscillation", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.oscillation || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.oscillation <= 2 && "Oscillation excessive → perte d’énergie et contraintes ↑"}
+                {scores.oscillation >= 3 && scores.oscillation <= 4 && "Oscillation correcte"}
+                {scores.oscillation === 5 && "Très bonne économie de course"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Bruit à l’impact</div>
+              <input type="range" min="0" max="5" value={scores.bruit || 0} onChange={(e) => handleTechniqueChange("bruit", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.bruit || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.bruit <= 2 && "Impact sonore élevé → contraintes mécaniques importantes"}
+                {scores.bruit >= 3 && scores.bruit <= 4 && "Impact modéré"}
+                {scores.bruit === 5 && "Course silencieuse → bonne absorption active"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Overstride</div>
+              <input type="range" min="0" max="5" value={scores.overstride || 0} onChange={(e) => handleTechniqueChange("overstride", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.overstride || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.overstride <= 2 && "Overstride marqué → freinage important et surcharge mécanique probable"}
+                {scores.overstride >= 3 && scores.overstride <= 4 && "Placement du pied globalement correct"}
+                {scores.overstride === 5 && "Placement du pied efficient, sans sur-allongement notable"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Stabilité du bassin</div>
+              <input type="range" min="0" max="5" value={scores.stabiliteBassin || 0} onChange={(e) => handleTechniqueChange("stabiliteBassin", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.stabiliteBassin || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.stabiliteBassin <= 2 && "Stabilité pelvienne insuffisante → contrôle proximal à renforcer"}
+                {scores.stabiliteBassin >= 3 && scores.stabiliteBassin <= 4 && "Stabilité du bassin correcte"}
+                {scores.stabiliteBassin === 5 && "Très bon contrôle du bassin pendant la course"}
+              </div>
+            </div>
+
+            <div style={cardScore}>
+              <div style={{ fontWeight: 900 }}>Score technique</div>
+              <div style={{ fontSize: 40 }}>{scores.technique}/25</div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={titleStyle}>Analyse globale</div>
+              <div style={interpretStyle}>
+                {scores.cadence <= 2 && "Travail prioritaire sur la cadence et la fréquence de pas. "}
+                {scores.oscillation <= 2 && "Réduire l’oscillation verticale pour améliorer l’économie. "}
+                {scores.bruit <= 2 && "Diminuer l’impact au sol par un travail pied / cadence. "}
+                {scores.overstride <= 2 && "Corriger le placement du pied pour limiter le freinage. "}
+                {scores.stabiliteBassin <= 2 && "Renforcer le contrôle proximal et la stabilité pelvienne. "}
+                {scores.cadence >= 4 &&
+                  scores.oscillation >= 4 &&
+                  scores.bruit >= 4 &&
+                  scores.overstride >= 4 &&
+                  scores.stabiliteBassin >= 4 &&
+                  "Technique de course efficiente."}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+              {techniqueNotes.map((note, i) => (
+                <div key={i} style={{ background: BRAND.panel, border: `1px solid ${BRAND.border}`, borderRadius: 16, padding: 14, color: BRAND.text, lineHeight: 1.5 }}>
+                  {note}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={titleStyle}>Note complémentaire</div>
+              <textarea value={patient.techniqueNote} onChange={(e) => handlePatientChange("techniqueNote", e.target.value)} style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} />
+            </div>
+          </div>
+        )}
+
+        {step > 0 && step < 6 && step !== 2 && step !== 3 && step !== 4 && (
           <div style={card}>
             <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 14 }}>{sections[step].title}</div>
             <div style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16 }}>
@@ -1061,7 +1255,7 @@ export default function RunningClinicElite() {
                   <div style={{ width: `${injuryRisk.score}%`, height: "100%", background: injuryRisk.color, borderRadius: 999 }} />
                 </div>
                 <div style={{ color: BRAND.muted, lineHeight: 1.5 }}>
-                  Indicateur synthétique combinant douleur, charge, déficits de mobilité, force et asymétries droite/gauche.
+                  Indicateur synthétique combinant douleur, charge, déficits de mobilité, force, technique et asymétries droite/gauche.
                 </div>
               </div>
             </div>
