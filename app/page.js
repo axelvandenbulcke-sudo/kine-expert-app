@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v3";
+const APP_KEY = "kine-expert-roubaix-elite-v4";
 
 const initialPatient = {
   name: "",
@@ -44,8 +44,8 @@ const initialPatient = {
 const initialScores = {
   anamnesis: 0,
   mobility: 0,
-  technique: 0,
   physical: 0,
+  technique: 0,
   load: 0,
 
   deepSquatLeft: 0,
@@ -76,14 +76,22 @@ const initialScores = {
   tibPostRight: 0,
   flex1Left: 0,
   flex1Right: 0,
+
+  quadNote: 0,
+  hamNote: 0,
+  abdNote: 0,
+  addNote: 0,
+  fibNote: 0,
+  tibPostNote: 0,
+  flex1Note: 0,
 };
 
 const sections = [
   { id: "patient", title: "Patient" },
   { id: "anamnesis", title: "Anamnèse", max: 20 },
   { id: "mobility", title: "Mobilité", max: 20 },
-  { id: "technique", title: "Technique de course", max: 25 },
   { id: "physical", title: "Force", max: 20 },
+  { id: "technique", title: "Technique de course", max: 25 },
   { id: "load", title: "Gestion de charge", max: 15 },
   { id: "results", title: "Résultats" },
 ];
@@ -91,16 +99,16 @@ const sections = [
 const labels = {
   anamnesis: "Anamnèse",
   mobility: "Mobilité",
-  technique: "Technique de course",
   physical: "Force",
+  technique: "Technique de course",
   load: "Gestion de charge",
 };
 
 const maxScores = {
   anamnesis: 20,
   mobility: 20,
-  technique: 25,
   physical: 20,
+  technique: 25,
   load: 15,
 };
 
@@ -115,13 +123,13 @@ const mobilityTests = [
 ];
 
 const forceTests = [
-  { label: "Quadriceps", L: "quadLeft", R: "quadRight" },
-  { label: "Ischio-jambiers", L: "hamLeft", R: "hamRight" },
-  { label: "Abducteurs", L: "abdLeft", R: "abdRight" },
-  { label: "Adducteurs", L: "addLeft", R: "addRight" },
-  { label: "Fibulaires", L: "fibLeft", R: "fibRight" },
-  { label: "Tibial postérieur", L: "tibPostLeft", R: "tibPostRight" },
-  { label: "Fléchisseur du 1", L: "flex1Left", R: "flex1Right" },
+  { label: "Quadriceps", L: "quadLeft", R: "quadRight", note: "quadNote" },
+  { label: "Ischio-jambiers", L: "hamLeft", R: "hamRight", note: "hamNote" },
+  { label: "Abducteurs", L: "abdLeft", R: "abdRight", note: "abdNote" },
+  { label: "Adducteurs", L: "addLeft", R: "addRight", note: "addNote" },
+  { label: "Fibulaires", L: "fibLeft", R: "fibRight", note: "fibNote" },
+  { label: "Tibial postérieur", L: "tibPostLeft", R: "tibPostRight", note: "tibPostNote" },
+  { label: "Fléchisseur du 1", L: "flex1Left", R: "flex1Right", note: "flex1Note" },
 ];
 
 function getLevel(total) {
@@ -130,104 +138,6 @@ function getLevel(total) {
   if (total < 80) return { label: "Intermédiaire", color: BRAND.yellow };
   if (total < 90) return { label: "Bon niveau", color: BRAND.green };
   return { label: "Optimisé", color: BRAND.blue };
-}
-
-function buildRecommendations(scores) {
-  const recos = [];
-
-  if (scores.load <= 8) {
-    recos.push("Sécuriser la charge : réduire les pics, stabiliser 2 à 3 semaines, reconstruire progressivement.");
-  }
-  if (scores.mobility <= 12) {
-    recos.push("Améliorer la mobilité globale et le contrôle distal : cheville, pied, stabilité unipodale et qualité d’appui.");
-  }
-  if (scores.technique <= 14) {
-    recos.push("Améliorer l’économie de course : éducatifs, travail de pied, appuis réactifs et légère augmentation de cadence.");
-  }
-  if (scores.physical <= 14) {
-    recos.push("Renforcer les groupes clés de propulsion et de contrôle : quadriceps, ischios, abducteurs, mollets et muscles du pied.");
-  }
-  if (scores.anamnesis <= 12) {
-    recos.push("Surveiller le risque de récidive : progression prudente, douleur tolérable et recontrôle régulier.");
-  }
-  if (recos.length === 0) {
-    recos.push("Consolider les acquis et affiner la performance avec un suivi périodique.");
-  }
-
-  return recos.slice(0, 5);
-}
-
-function buildSynthesis(patient, scores, total) {
-  const ordered = Object.entries({
-    anamnesis: scores.anamnesis,
-    mobility: scores.mobility,
-    technique: scores.technique,
-    physical: scores.physical,
-    load: scores.load,
-  }).sort((a, b) => a[1] - b[1]);
-
-  const weakest = labels[ordered[0][0]].toLowerCase();
-  const strongest = labels[[...ordered].sort((a, b) => b[1] - a[1])[0][0]].toLowerCase();
-  const name = patient.name || "Le bilan";
-
-  return `Le bilan de ${name} met en évidence un profil ${getLevel(total).label.toLowerCase()}. Le principal levier de progression concerne ${weakest}. Le point le plus solide concerne ${strongest}. L’objectif est de transformer ce bilan en plan d’action simple, progressif et mesurable sur les 4 à 8 prochaines semaines.`;
-}
-
-function radarSvg(scores) {
-  const width = 420;
-  const height = 320;
-  const cx = 210;
-  const cy = 150;
-  const radius = 95;
-
-  const data = [
-    { label: "Anamnèse", value: scores.anamnesis, max: 20, angle: -90 },
-    { label: "Mobilité", value: scores.mobility, max: 20, angle: -18 },
-    { label: "Technique", value: scores.technique, max: 25, angle: 54 },
-    { label: "Force", value: scores.physical, max: 20, angle: 126 },
-    { label: "Charge", value: scores.load, max: 15, angle: 198 },
-  ];
-
-  const point = (angleDeg, r) => {
-    const a = (Math.PI / 180) * angleDeg;
-    return { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
-  };
-
-  const ringPoints = (ring) =>
-    data
-      .map((d) => {
-        const p = point(d.angle, radius * ring);
-        return `${p.x},${p.y}`;
-      })
-      .join(" ");
-
-  const poly = data
-    .map((d) => {
-      const p = point(d.angle, radius * (d.value / d.max));
-      return `${p.x},${p.y}`;
-    })
-    .join(" ");
-
-  return `
-  <svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-    <polygon points="${ringPoints(0.25)}" fill="none" stroke="#454545" stroke-width="1" />
-    <polygon points="${ringPoints(0.5)}" fill="none" stroke="#454545" stroke-width="1" />
-    <polygon points="${ringPoints(0.75)}" fill="none" stroke="#454545" stroke-width="1" />
-    <polygon points="${ringPoints(1)}" fill="none" stroke="#454545" stroke-width="1" />
-    ${data
-      .map((d) => {
-        const p = point(d.angle, radius);
-        return `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="#454545" stroke-width="1" />`;
-      })
-      .join("")}
-    <polygon points="${poly}" fill="#e11d2e" fill-opacity="0.38" stroke="#e11d2e" stroke-width="2.5" />
-    ${data
-      .map((d) => {
-        const p = point(d.angle, radius + 28);
-        return `<text x="${p.x}" y="${p.y}" text-anchor="middle" font-size="12" fill="#d4d4d8" font-family="Arial, sans-serif">${d.label}</text>`;
-      })
-      .join("")}
-  </svg>`;
 }
 
 function scoreBar(current, max) {
@@ -239,6 +149,35 @@ function testColor(score, max) {
   if (ratio < 0.4) return "#dc2626";
   if (ratio < 0.7) return "#f59e0b";
   return "#16a34a";
+}
+
+function asymmetryPercent(left, right) {
+  const l = Number(left || 0);
+  const r = Number(right || 0);
+  if (!l && !r) return 0;
+  const maxVal = Math.max(l, r);
+  if (!maxVal) return 0;
+  return (Math.abs(l - r) / maxVal) * 100;
+}
+
+function asymmetryPenalty(percent) {
+  if (percent >= 20) return 1;
+  if (percent >= 10) return 0.5;
+  return 0;
+}
+
+function symmetryText(left, right) {
+  const diff = Math.abs(left - right);
+  if (diff === 0) return "Symétrie excellente";
+  if (diff === 1) return "Légère asymétrie";
+  return "Asymétrie marquée";
+}
+
+function forceSymmetryText(left, right) {
+  const diff = Math.abs(left - right);
+  if (diff === 0) return "Symétrie excellente";
+  if (diff === 1) return "Légère asymétrie";
+  return "Asymétrie marquée";
 }
 
 function computeMobilityTotal(scores) {
@@ -254,11 +193,38 @@ function computeMobilityTotal(scores) {
   return Math.round((totalRaw / 21) * 20);
 }
 
-function symmetryText(left, right) {
-  const diff = Math.abs(left - right);
-  if (diff === 0) return "Symétrie excellente";
-  if (diff === 1) return "Légère asymétrie";
-  return "Asymétrie marquée";
+function computeSmartForceTotal(scores) {
+  const muscles = [
+    { note: "quadNote", left: "quadLeft", right: "quadRight" },
+    { note: "hamNote", left: "hamLeft", right: "hamRight" },
+    { note: "abdNote", left: "abdLeft", right: "abdRight" },
+    { note: "addNote", left: "addLeft", right: "addRight" },
+    { note: "fibNote", left: "fibLeft", right: "fibRight" },
+    { note: "tibPostNote", left: "tibPostLeft", right: "tibPostRight" },
+    { note: "flex1Note", left: "flex1Left", right: "flex1Right" },
+  ];
+
+  let total = 0;
+
+  muscles.forEach((m) => {
+    const rawNote = Number(scores[m.note] || 0);
+    const asym = asymmetryPercent(scores[m.left], scores[m.right]);
+    const penalty = asymmetryPenalty(asym);
+    const adjusted = Math.max(0, rawNote - penalty);
+    total += adjusted;
+  });
+
+  const quad = (Number(scores.quadLeft || 0) + Number(scores.quadRight || 0)) / 2;
+  const ham = (Number(scores.hamLeft || 0) + Number(scores.hamRight || 0)) / 2;
+  const hqRatio = quad ? ham / quad : 0;
+
+  let ratioPenalty = 0;
+  if (hqRatio < 0.6) ratioPenalty = 1;
+  else if (hqRatio < 0.75) ratioPenalty = 0.5;
+
+  total = Math.max(0, total - ratioPenalty);
+
+  return Math.round((total / 35) * 20);
 }
 
 function mobilityInterpretations(scores) {
@@ -294,39 +260,21 @@ function mobilityInterpretations(scores) {
   return out;
 }
 
-function computeForceTotal(scores) {
-  const totalRaw =
-    (scores.quadLeft + scores.quadRight) / 2 +
-    (scores.hamLeft + scores.hamRight) / 2 +
-    (scores.abdLeft + scores.abdRight) / 2 +
-    (scores.addLeft + scores.addRight) / 2 +
-    (scores.fibLeft + scores.fibRight) / 2 +
-    (scores.tibPostLeft + scores.tibPostRight) / 2 +
-    (scores.flex1Left + scores.flex1Right) / 2;
-
-  return Math.round((totalRaw / 35) * 20);
-}
-
-function forceSymmetryText(left, right) {
-  const diff = Math.abs(left - right);
-  if (diff === 0) return "Symétrie excellente";
-  if (diff === 1) return "Légère asymétrie";
-  return "Asymétrie marquée";
-}
-
 function buildForceInterpretation(scores) {
   const notes = [];
 
   const quadAvg = (scores.quadLeft + scores.quadRight) / 2;
   const hamAvg = (scores.hamLeft + scores.hamRight) / 2;
-  const ratio = hamAvg > 0 ? quadAvg / hamAvg : 0;
+  const ratio = quadAvg > 0 ? hamAvg / quadAvg : 0;
 
-  if (ratio > 1.8) {
-    notes.push("Dominance quadriceps : profil pouvant majorer certaines contraintes fémoro-patellaires ou antérieures du genou.");
-  } else if (ratio < 1.2) {
-    notes.push("Dominance ischio-jambiers ou déficit quadriceps : à interpréter selon le contexte clinique et les tests fonctionnels.");
+  if (ratio < 0.6) {
+    notes.push("Ratio H/Q bas : ischio-jambiers probablement insuffisants par rapport aux quadriceps.");
+  } else if (ratio < 0.75) {
+    notes.push("Ratio H/Q perfectible : déséquilibre musculaire modéré chez le coureur.");
+  } else if (ratio < 0.9) {
+    notes.push("Ratio H/Q globalement satisfaisant pour un profil coureur.");
   } else {
-    notes.push("Ratio quadriceps / ischio globalement équilibré.");
+    notes.push("Ratio H/Q élevé : dominance relative des ischio-jambiers.");
   }
 
   if (Math.min(scores.abdLeft, scores.abdRight) <= 2) {
@@ -369,26 +317,34 @@ function buildForceInterpretation(scores) {
 function buildForceRecommendations(scores) {
   const recos = [];
 
-  if (Math.min(scores.quadLeft, scores.quadRight) <= 2) {
+  if (Math.min(scores.quadNote, scores.hamNote) === scores.quadNote && Math.min(scores.quadLeft, scores.quadRight) <= 150) {
     recos.push("Quadriceps : squat, split squat, Spanish squat.");
   }
-  if (Math.min(scores.hamLeft, scores.hamRight) <= 2) {
+  if (Math.min(scores.hamNote, 5) <= 2) {
     recos.push("Ischio-jambiers : hip hinge, Romanian deadlift, Nordic assisté.");
   }
-  if (Math.min(scores.abdLeft, scores.abdRight) <= 2) {
+  if (Math.min(scores.abdNote, 5) <= 2) {
     recos.push("Abducteurs : monster walk, side step band, appui unipodal contrôlé.");
   }
-  if (Math.min(scores.addLeft, scores.addRight) <= 2) {
+  if (Math.min(scores.addNote, 5) <= 2) {
     recos.push("Adducteurs : Copenhagen plank, squeeze ballon, fente latérale.");
   }
-  if (Math.min(scores.fibLeft, scores.fibRight) <= 2) {
+  if (Math.min(scores.fibNote, 5) <= 2) {
     recos.push("Fibulaires : éversion élastique, équilibre latéral, contrôle cheville.");
   }
-  if (Math.min(scores.tibPostLeft, scores.tibPostRight) <= 2) {
+  if (Math.min(scores.tibPostNote, 5) <= 2) {
     recos.push("Tibial postérieur : inversion contrôlée, maintien d’arche, travail pied-cheville.");
   }
-  if (Math.min(scores.flex1Left, scores.flex1Right) <= 2) {
+  if (Math.min(scores.flex1Note, 5) <= 2) {
     recos.push("Fléchisseur du 1 : griffe d’orteils, poussée hallux, travail du premier rayon.");
+  }
+
+  const quadAvg = (scores.quadLeft + scores.quadRight) / 2;
+  const hamAvg = (scores.hamLeft + scores.hamRight) / 2;
+  const ratio = quadAvg > 0 ? hamAvg / quadAvg : 0;
+
+  if (ratio < 0.75) {
+    recos.push("Ratio H/Q perfectible : prioriser renforcement ischio-jambiers, contrôle excentrique et travail unilatéral.");
   }
 
   if (recos.length === 0) {
@@ -396,6 +352,53 @@ function buildForceRecommendations(scores) {
   }
 
   return recos.slice(0, 6);
+}
+
+function buildRecommendations(scores) {
+  const recos = [];
+
+  if (scores.load <= 8) {
+    recos.push("Sécuriser la charge : réduire les pics, stabiliser 2 à 3 semaines, reconstruire progressivement.");
+  }
+  if (scores.mobility <= 12) {
+    recos.push("Améliorer la mobilité globale et le contrôle distal : cheville, pied, stabilité unipodale et qualité d’appui.");
+  }
+  if (scores.technique <= 14) {
+    recos.push("Améliorer l’économie de course : éducatifs, travail de pied, appuis réactifs et légère augmentation de cadence.");
+  }
+  if (scores.physical <= 14) {
+    recos.push("Renforcer les groupes clés de propulsion et de contrôle : quadriceps, ischios, abducteurs, adducteurs, pied-cheville.");
+  }
+  if (scores.anamnesis <= 12) {
+    recos.push("Surveiller le risque de récidive : progression prudente, douleur tolérable et recontrôle régulier.");
+  }
+
+  if (recos.length === 0) {
+    recos.push("Consolider les acquis et affiner la performance avec un suivi périodique.");
+  }
+
+  return recos.slice(0, 5);
+}
+
+function buildAutoPlan(patient, scores) {
+  const plan = [];
+
+  if (scores.load <= 9) {
+    plan.push("Charge : stabiliser 2 semaines, éviter tout pic brutal, augmenter ensuite de façon progressive et tolérable.");
+  }
+  if (scores.mobility <= 13) {
+    plan.push("Mobilité : 2 à 3 blocs/semaine cheville, pied, mollets et contrôle unipodal, priorité au côté le plus faible.");
+  }
+  if (scores.technique <= 15) {
+    plan.push("Technique : intégrer 6 à 10 minutes d’éducatifs, cadence, travail d’appuis et posture sur 2 séances/semaine.");
+  }
+  if (scores.physical <= 13) {
+    plan.push("Force : 2 séances/semaine avec focus quadriceps, ischios, abducteurs, adducteurs, pied-cheville et progression simple.");
+  }
+
+  plan.push(`Course : maintenir ${patient.sessionsPerWeek || "2 à 3"} séances/semaine avec une séance facile, une séance qualitative légère et une sortie longue si tolérée.`);
+
+  return plan.slice(0, 5);
 }
 
 function computeInjuryRisk(patient, scores) {
@@ -437,27 +440,6 @@ function computeInjuryRisk(patient, scores) {
   return { score: risk, label: "Risque faible", color: BRAND.green };
 }
 
-function buildAutoPlan(patient, scores) {
-  const plan = [];
-
-  if (scores.load <= 9) {
-    plan.push("Charge : stabiliser 2 semaines, éviter tout pic brutal, augmenter ensuite de façon progressive et tolérable.");
-  }
-  if (scores.mobility <= 13) {
-    plan.push("Mobilité : 2 à 3 blocs/semaine cheville, pied, mollets et contrôle unipodal, priorité au côté le plus faible.");
-  }
-  if (scores.technique <= 15) {
-    plan.push("Technique : intégrer 6 à 10 minutes d’éducatifs, cadence, travail d’appuis et posture sur 2 séances/semaine.");
-  }
-  if (scores.physical <= 13) {
-    plan.push("Force : 2 séances/semaine avec focus quadriceps, ischios, abducteurs, adducteurs, pied-cheville et progression simple.");
-  }
-
-  plan.push(`Course : maintenir ${patient.sessionsPerWeek || "2 à 3"} séances/semaine avec une séance facile, une séance qualitative légère et une sortie longue si tolérée.`);
-
-  return plan.slice(0, 5);
-}
-
 export default function RunningClinicElite() {
   const [tab, setTab] = useState("bilan");
   const [step, setStep] = useState(6);
@@ -479,7 +461,7 @@ export default function RunningClinicElite() {
   }, [history]);
 
   const total = useMemo(
-    () => scores.anamnesis + scores.mobility + scores.technique + scores.physical + scores.load,
+    () => scores.anamnesis + scores.mobility + scores.physical + scores.technique + scores.load,
     [scores]
   );
 
@@ -494,7 +476,7 @@ export default function RunningClinicElite() {
 
   const quadAvg = useMemo(() => (scores.quadLeft + scores.quadRight) / 2, [scores.quadLeft, scores.quadRight]);
   const hamAvg = useMemo(() => (scores.hamLeft + scores.hamRight) / 2, [scores.hamLeft, scores.hamRight]);
-  const quadHamRatio = useMemo(() => (hamAvg > 0 ? (quadAvg / hamAvg).toFixed(2) : "-"), [quadAvg, hamAvg]);
+  const hqRatio = useMemo(() => (quadAvg > 0 ? (hamAvg / quadAvg).toFixed(2) : "-"), [quadAvg, hamAvg]);
 
   const bmi = useMemo(() => {
     const weight = Number(patient.weight);
@@ -521,10 +503,18 @@ export default function RunningClinicElite() {
     });
   };
 
-  const handleForceTestChange = (key, value) => {
+  const handleForceNewtonChange = (key, value) => {
     setScores((prev) => {
       const next = { ...prev, [key]: Number(value) };
-      next.physical = computeForceTotal(next);
+      next.physical = computeSmartForceTotal(next);
+      return next;
+    });
+  };
+
+  const handleForceNoteChange = (key, value) => {
+    setScores((prev) => {
+      const next = { ...prev, [key]: Number(value) };
+      next.physical = computeSmartForceTotal(next);
       return next;
     });
   };
@@ -558,8 +548,8 @@ export default function RunningClinicElite() {
       Object.entries({
         anamnesis: scores.anamnesis,
         mobility: scores.mobility,
-        technique: scores.technique,
         physical: scores.physical,
+        technique: scores.technique,
         load: scores.load,
       }).sort((a, b) => a[1] - b[1])[0][0]
     ];
@@ -568,19 +558,27 @@ export default function RunningClinicElite() {
       Object.entries({
         anamnesis: scores.anamnesis,
         mobility: scores.mobility,
-        technique: scores.technique,
         physical: scores.physical,
+        technique: scores.technique,
         load: scores.load,
       }).sort((a, b) => b[1] - a[1])[0][0]
     ];
 
-    const forceInterpretationHtml = buildForceInterpretation(scores)
-      .map((item) => `<li>${item}</li>`)
-      .join("");
+    const forceInterpretationHtml = forceInterpretation.map((item) => `<li>${item}</li>`).join("");
+    const forceRecommendationsHtml = forceRecommendations.map((item) => `<li>${item}</li>`).join("");
+    const autoPlanHtml = autoPlan.map((item) => `<li>${item}</li>`).join("");
+    const recommendationsHtml = recommendations.map((r) => `<li>${r}</li>`).join("");
 
-    const forceRecommendationsHtml = buildForceRecommendations(scores)
-      .map((item) => `<li>${item}</li>`)
-      .join("");
+    const hqInterpretation =
+      hqRatio === "-"
+        ? "Ratio non calculable"
+        : Number(hqRatio) < 0.6
+        ? "Risque élevé – ischios insuffisants"
+        : Number(hqRatio) < 0.75
+        ? "Déséquilibre musculaire"
+        : Number(hqRatio) < 0.9
+        ? "Bon équilibre"
+        : "Ischios dominants";
 
     const html = `
     <html>
@@ -688,7 +686,7 @@ export default function RunningClinicElite() {
           </div>
 
           <div class="grid2">
-            <div class="card"><h2>Plan d’action prioritaire</h2><ul>${recommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
+            <div class="card"><h2>Plan d’action prioritaire</h2><ul>${recommendationsHtml}</ul></div>
             <div class="card">
               <h2>Scores par domaine</h2>
               <table>
@@ -696,8 +694,8 @@ export default function RunningClinicElite() {
                 <tbody>
                   <tr><td>Anamnèse</td><td>${scores.anamnesis}/20</td></tr>
                   <tr><td>Mobilité</td><td>${scores.mobility}/20</td></tr>
-                  <tr><td>Technique de course</td><td>${scores.technique}/25</td></tr>
                   <tr><td>Force</td><td>${scores.physical}/20</td></tr>
+                  <tr><td>Technique de course</td><td>${scores.technique}/25</td></tr>
                   <tr><td>Gestion de charge</td><td>${scores.load}/15</td></tr>
                 </tbody>
               </table>
@@ -720,17 +718,9 @@ export default function RunningClinicElite() {
           </div>
 
           <div class="card">
-            <h2>Force — ratio quadriceps / ischio</h2>
-            <p><strong>Ratio :</strong> ${quadHamRatio}</p>
-            <p><strong>Interprétation :</strong> ${
-              quadHamRatio === "-"
-                ? "Ratio non calculable"
-                : Number(quadHamRatio) > 1.8
-                ? "Dominance quadriceps"
-                : Number(quadHamRatio) < 1.2
-                ? "Dominance ischio / déficit quadriceps"
-                : "Ratio équilibré"
-            }</p>
+            <h2>Ratio H/Q</h2>
+            <p><strong>Ratio ischio / quadriceps :</strong> ${hqRatio}</p>
+            <p><strong>Interprétation :</strong> ${hqInterpretation}</p>
           </div>
 
           <div class="card">
@@ -755,7 +745,7 @@ export default function RunningClinicElite() {
 
           <div class="card">
             <h2>Plan automatique</h2>
-            <ul>${autoPlan.map((item) => `<li>${item}</li>`).join("")}</ul>
+            <ul>${autoPlanHtml}</ul>
           </div>
 
           <div class="card">
@@ -1071,18 +1061,20 @@ export default function RunningClinicElite() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <div style={card}>
             <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Bilan de force</div>
             <div style={{ color: BRAND.muted, marginBottom: 16, fontSize: 14 }}>
-              Notation par groupe musculaire de 0 à 5, avec analyse droite / gauche.
+              Saisie en Newtons droite/gauche + note clinique manuelle /5. Le score force est recalculé automatiquement avec prise en compte des asymétries et du ratio H/Q.
             </div>
 
             {forceTests.map((m) => {
               const L = scores[m.L];
               const R = scores[m.R];
+              const note = scores[m.note];
+              const asym = asymmetryPercent(L, R);
               const mean = Math.round((((L || 0) + (R || 0)) / 2) * 10) / 10;
-              const color = testColor(mean, 5);
+              const color = testColor(note, 5);
 
               return (
                 <div
@@ -1107,47 +1099,54 @@ export default function RunningClinicElite() {
                         fontSize: 13,
                       }}
                     >
-                      {mean}/5
+                      Note {note}/5
                     </div>
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                     <div>
-                      <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Gauche</div>
+                      <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Gauche (N)</div>
                       <input
-                        type="range"
-                        min="0"
-                        max="5"
+                        type="number"
                         value={L}
-                        onChange={(e) => handleForceTestChange(m.L, e.target.value)}
-                        style={{ width: "100%", accentColor: BRAND.red }}
+                        onChange={(e) => handleForceNewtonChange(m.L, e.target.value)}
+                        style={inputStyle}
+                        placeholder="Newton gauche"
                       />
-                      <div style={{ marginTop: 8, fontWeight: 800 }}>{L}/5</div>
                     </div>
 
                     <div>
-                      <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite</div>
+                      <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite (N)</div>
                       <input
-                        type="range"
-                        min="0"
-                        max="5"
+                        type="number"
                         value={R}
-                        onChange={(e) => handleForceTestChange(m.R, e.target.value)}
-                        style={{ width: "100%", accentColor: BRAND.red }}
+                        onChange={(e) => handleForceNewtonChange(m.R, e.target.value)}
+                        style={inputStyle}
+                        placeholder="Newton droite"
                       />
-                      <div style={{ marginTop: 8, fontWeight: 800 }}>{R}/5</div>
                     </div>
+                  </div>
 
-                    <div
-                      style={{
-                        gridColumn: "1 / -1",
-                        color: Math.abs((L || 0) - (R || 0)) >= 2 ? BRAND.red : BRAND.muted,
-                        fontSize: 13,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {forceSymmetryText(L || 0, R || 0)}
+                  <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ color: BRAND.muted, fontSize: 13 }}>
+                      Moyenne : <strong style={{ color: BRAND.text }}>{mean} N</strong>
                     </div>
+                    <div style={{ color: asym >= 20 ? BRAND.red : asym >= 10 ? BRAND.orange : BRAND.green, fontSize: 13, fontWeight: 700 }}>
+                      Asymétrie : {asym.toFixed(1)}% — {forceSymmetryText(L, R)}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Note clinique /5</div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="5"
+                      value={note}
+                      onChange={(e) => handleForceNoteChange(m.note, e.target.value)}
+                      style={{ width: "100%", accentColor: BRAND.red }}
+                    />
+                    <div style={{ marginTop: 8, fontWeight: 800 }}>{note}/5</div>
                   </div>
                 </div>
               );
@@ -1162,7 +1161,7 @@ export default function RunningClinicElite() {
                 background: "rgba(255,255,255,0.02)",
               }}
             >
-              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Score force</div>
+              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Score force intelligent</div>
               <div style={{ fontSize: 42, fontWeight: 900, color: BRAND.text }}>{scores.physical}/20</div>
               <div style={{ width: "100%", height: 12, background: "#222", borderRadius: 999, overflow: "hidden", marginTop: 10 }}>
                 <div
@@ -1185,16 +1184,18 @@ export default function RunningClinicElite() {
                 background: BRAND.panel2,
               }}
             >
-              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Ratio quadriceps / ischio</div>
-              <div style={{ fontSize: 34, fontWeight: 900 }}>{quadHamRatio}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Ratio Ischios / Quadriceps (H/Q)</div>
+              <div style={{ fontSize: 34, fontWeight: 900 }}>{hqRatio}</div>
               <div style={{ color: BRAND.muted, marginTop: 8 }}>
-                {quadHamRatio === "-"
+                {hqRatio === "-"
                   ? "Ratio non calculable"
-                  : Number(quadHamRatio) > 1.8
-                  ? "Dominance quadriceps"
-                  : Number(quadHamRatio) < 1.2
-                  ? "Dominance ischio / déficit quadriceps"
-                  : "Ratio équilibré"}
+                  : Number(hqRatio) < 0.6
+                  ? "Risque élevé – ischios insuffisants"
+                  : Number(hqRatio) < 0.75
+                  ? "Déséquilibre musculaire"
+                  : Number(hqRatio) < 0.9
+                  ? "Bon équilibre"
+                  : "Ischios dominants"}
               </div>
             </div>
 
@@ -1251,7 +1252,7 @@ export default function RunningClinicElite() {
           </div>
         )}
 
-        {step > 0 && step < 6 && step !== 2 && step !== 4 && (
+        {step > 0 && step < 6 && step !== 2 && step !== 3 && (
           <div style={card}>
             <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 14 }}>{sections[step].title}</div>
             <div
@@ -1332,7 +1333,7 @@ export default function RunningClinicElite() {
                   <div style={{ width: `${injuryRisk.score}%`, height: "100%", background: injuryRisk.color, borderRadius: 999 }} />
                 </div>
                 <div style={{ color: BRAND.muted, lineHeight: 1.5 }}>
-                  Indicateur synthétique combinant douleur, gestion de charge, déficits de mobilité, niveau de force et asymétries droite/gauche.
+                  Indicateur synthétique combinant douleur, charge, déficits de mobilité, force et asymétries droite/gauche.
                 </div>
               </div>
             </div>
