@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v8";
+const APP_KEY = "kine-expert-roubaix-elite-v9";
 
 const initialPatient = {
   name: "",
@@ -39,6 +39,7 @@ const initialPatient = {
   mobilityNote: "",
   forceNote: "",
   techniqueNote: "",
+  loadNote: "",
   notes: "",
 };
 
@@ -91,6 +92,12 @@ const initialScores = {
   bruit: 0,
   overstride: 0,
   stabiliteBassin: 0,
+
+  progressionCharge: 0,
+  repartitionHebdo: 0,
+  intensiteCharge: 0,
+  recuperationCharge: 0,
+  toleranceCharge: 0,
 };
 
 const sections = [
@@ -237,6 +244,17 @@ function computeTechniqueTotal(scores) {
   return Math.round((totalRaw / 25) * 25);
 }
 
+function computeLoadTotal(scores) {
+  const totalRaw =
+    Number(scores.progressionCharge || 0) +
+    Number(scores.repartitionHebdo || 0) +
+    Number(scores.intensiteCharge || 0) +
+    Number(scores.recuperationCharge || 0) +
+    Number(scores.toleranceCharge || 0);
+
+  return Math.round((totalRaw / 25) * 15);
+}
+
 function mobilityInterpretations(scores) {
   const out = [];
 
@@ -355,6 +373,32 @@ function buildTechniqueInterpretation(scores) {
   if (scores.stabiliteBassin <= 2) notes.push("Stabilité du bassin insuffisante : possible déficit de contrôle proximal.");
   else if (scores.stabiliteBassin <= 4) notes.push("Stabilité pelvienne correcte.");
   else notes.push("Très bon contrôle du bassin pendant la course.");
+
+  return notes;
+}
+
+function buildLoadInterpretation(scores) {
+  const notes = [];
+
+  if (scores.progressionCharge <= 2) notes.push("Progression récente trop brutale ou mal tolérée : risque de surcharge augmenté.");
+  else if (scores.progressionCharge <= 4) notes.push("Progression de charge globalement correcte mais à surveiller.");
+  else notes.push("Progression de charge cohérente et bien maîtrisée.");
+
+  if (scores.repartitionHebdo <= 2) notes.push("Répartition hebdomadaire peu favorable : manque de régularité ou récupération insuffisante.");
+  else if (scores.repartitionHebdo <= 4) notes.push("Répartition hebdomadaire correcte.");
+  else notes.push("Très bonne organisation hebdomadaire des séances.");
+
+  if (scores.intensiteCharge <= 2) notes.push("Gestion de l’intensité insuffisante : excès de séances dures ou mauvaise distribution.");
+  else if (scores.intensiteCharge <= 4) notes.push("Gestion de l’intensité acceptable mais encore perfectible.");
+  else notes.push("Intensité d’entraînement bien dosée.");
+
+  if (scores.recuperationCharge <= 2) notes.push("Récupération insuffisante : sommeil, fatigue ou fraîcheur à optimiser.");
+  else if (scores.recuperationCharge <= 4) notes.push("Récupération correcte.");
+  else notes.push("Très bonne récupération entre les séances.");
+
+  if (scores.toleranceCharge <= 2) notes.push("Tolérance douleur / fatigue défavorable : charge probablement au-dessus de la capacité actuelle.");
+  else if (scores.toleranceCharge <= 4) notes.push("Tolérance clinique correcte mais à surveiller.");
+  else notes.push("Bonne tolérance actuelle à la charge d’entraînement.");
 
   return notes;
 }
@@ -531,6 +575,7 @@ export default function RunningClinicElite() {
   const forceInterpretation = useMemo(() => buildForceInterpretation(scores), [scores]);
   const forceRecommendations = useMemo(() => buildForceRecommendations(scores), [scores]);
   const techniqueNotes = useMemo(() => buildTechniqueInterpretation(scores), [scores]);
+  const loadNotes = useMemo(() => buildLoadInterpretation(scores), [scores]);
 
   const quadAvg = useMemo(() => (scores.quadLeft + scores.quadRight) / 2, [scores.quadLeft, scores.quadRight]);
   const hamAvg = useMemo(() => (scores.hamLeft + scores.hamRight) / 2, [scores.hamLeft, scores.hamRight]);
@@ -581,6 +626,14 @@ export default function RunningClinicElite() {
     setScores((prev) => {
       const next = { ...prev, [key]: Number(value) };
       next.technique = computeTechniqueTotal(next);
+      return next;
+    });
+  };
+
+  const handleLoadChange = (key, value) => {
+    setScores((prev) => {
+      const next = { ...prev, [key]: Number(value) };
+      next.load = computeLoadTotal(next);
       return next;
     });
   };
@@ -649,8 +702,19 @@ export default function RunningClinicElite() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>
           @page { size: A4; margin: 12mm; }
-          :root { --black:#0b0b0b; --red:#e11d2e; --text:#111827; --muted:#6b7280; --line:#e5e7eb; }
-          body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; margin:0; color:var(--text); background:#fff; }
+          :root {
+            --black:#0b0b0b;
+            --red:#e11d2e;
+            --text:#111827;
+            --muted:#6b7280;
+            --line:#e5e7eb;
+          }
+          body {
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+            margin:0;
+            color:var(--text);
+            background:#fff;
+          }
           .page { max-width:820px; margin:0 auto; }
           .topband { height:8px; background:var(--red); border-radius:999px; margin-bottom:18px; }
           .header { display:flex; justify-content:space-between; gap:20px; margin-bottom:18px; }
@@ -658,23 +722,63 @@ export default function RunningClinicElite() {
           .brand .red { color:var(--red); }
           .subtitle,.meta { color:var(--muted); font-size:14px; }
           .hero { display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px; margin-bottom:16px; }
-          .card { border:1px solid var(--line); border-radius:20px; padding:18px; background:#fff; margin-bottom:16px; }
-          .card-dark { background:var(--black); color:white; border-radius:20px; padding:20px; }
-          .score { font-size:58px; font-weight:900; color:var(--red); }
-          .pill { display:inline-block; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.08); color:white; font-weight:800; font-size:13px; }
           .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+          .card {
+            border:1px solid var(--line);
+            border-radius:20px;
+            padding:18px;
+            background:#fff;
+            margin-bottom:16px;
+          }
+          .card-dark {
+            background:var(--black);
+            color:white;
+            border-radius:20px;
+            padding:20px;
+          }
+          .score { font-size:58px; font-weight:900; color:var(--red); }
+          .pill {
+            display:inline-block;
+            padding:8px 12px;
+            border-radius:999px;
+            background:rgba(255,255,255,0.08);
+            color:white;
+            font-weight:800;
+            font-size:13px;
+          }
           h2 { margin:0 0 12px; font-size:18px; }
           p,li { font-size:14px; line-height:1.6; }
           ul { margin:0; padding-left:18px; }
           table { width:100%; border-collapse:collapse; }
-          th,td { border-bottom:1px solid var(--line); padding:10px 8px; text-align:left; font-size:14px; }
-          .footer { margin-top:18px; padding-top:12px; border-top:1px solid var(--line); color:var(--muted); font-size:11px; text-align:center; }
-          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+          td {
+            border-bottom:1px solid var(--line);
+            padding:10px 8px;
+            text-align:left;
+            font-size:14px;
+          }
+          .radar-wrap {
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            min-height:320px;
+          }
+          .footer {
+            margin-top:18px;
+            padding-top:12px;
+            border-top:1px solid var(--line);
+            color:var(--muted);
+            font-size:11px;
+            text-align:center;
+          }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
         </style>
       </head>
       <body>
         <div class="page">
           <div class="topband"></div>
+
           <div class="header">
             <div>
               <div class="brand">KINÉ <span class="red">EXPERT</span> ROUBAIX</div>
@@ -699,6 +803,7 @@ export default function RunningClinicElite() {
               <p><strong>Levier prioritaire :</strong> ${weakest}</p>
               <p><strong>Point fort :</strong> ${strongest}</p>
             </div>
+
             <div class="card-dark">
               <div>Score global</div>
               <div class="score">${total}/100</div>
@@ -708,8 +813,22 @@ export default function RunningClinicElite() {
           </div>
 
           <div class="grid2">
-            <div class="card"><h2>Synthèse clinique</h2><p>${synthesis}</p></div>
-            <div class="card"><h2>Ratio H/Q</h2><p><strong>${hqRatio}</strong></p><p>${hqInterpretation}</p></div>
+            <div class="card">
+              <h2>Synthèse clinique</h2>
+              <p>${synthesis}</p>
+            </div>
+            <div class="card">
+              <h2>Ratio H/Q</h2>
+              <p><strong>${hqRatio}</strong></p>
+              <p>${hqInterpretation}</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Radar clinique</h2>
+            <div class="radar-wrap">
+              ${radarSvg(scores)}
+            </div>
           </div>
 
           <div class="card">
@@ -727,6 +846,7 @@ export default function RunningClinicElite() {
 
           <div class="card"><h2>Interprétation force</h2><ul>${forceInterpretation.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Interprétation technique</h2><ul>${techniqueNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
+          <div class="card"><h2>Interprétation gestion de charge</h2><ul>${loadNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations</h2><ul>${recommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations force</h2><ul>${forceRecommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Plan automatique</h2><ul>${autoPlan.map((r) => `<li>${r}</li>`).join("")}</ul></div>
@@ -734,6 +854,7 @@ export default function RunningClinicElite() {
           <div class="card"><h2>Note complémentaire mobilité</h2><p>${patient.mobilityNote || "Aucune note."}</p></div>
           <div class="card"><h2>Note complémentaire force</h2><p>${patient.forceNote || "Aucune note."}</p></div>
           <div class="card"><h2>Note complémentaire technique</h2><p>${patient.techniqueNote || "Aucune note."}</p></div>
+          <div class="card"><h2>Note complémentaire gestion de charge</h2><p>${patient.loadNote || "Aucune note."}</p></div>
           <div class="card"><h2>Notes complémentaires</h2><p>${patient.notes || "Aucune note."}</p></div>
 
           <div class="footer">Document généré par Kiné Expert Roubaix</div>
@@ -1190,15 +1311,84 @@ export default function RunningClinicElite() {
           </div>
         )}
 
-        {step > 0 && step < 6 && step !== 2 && step !== 3 && step !== 4 && (
+        {step === 5 && (
           <div style={card}>
-            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 14 }}>{sections[step].title}</div>
-            <div style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontWeight: 800 }}>{sections[step].title}</span>
-                <span style={{ color: BRAND.red, fontWeight: 900 }}>{scores[sections[step].id]}/{sections[step].max}</span>
+            <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Gestion de la charge</div>
+            <div style={{ color: BRAND.muted, marginBottom: 16 }}>
+              Analyse rapide de l’exposition à la charge d’entraînement et de sa tolérance clinique.
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Progression récente de charge</div>
+              <input type="range" min="0" max="5" value={scores.progressionCharge || 0} onChange={(e) => handleLoadChange("progressionCharge", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.progressionCharge || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.progressionCharge <= 2 && "Augmentation récente trop brutale ou mal tolérée"}
+                {scores.progressionCharge >= 3 && scores.progressionCharge <= 4 && "Progression globalement correcte"}
+                {scores.progressionCharge === 5 && "Progression très bien maîtrisée"}
               </div>
-              <input type="range" min="0" max={sections[step].max} value={scores[sections[step].id]} onChange={(e) => handleScoreChange(sections[step].id, e.target.value)} style={{ width: "100%", accentColor: BRAND.red }} />
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Répartition hebdomadaire</div>
+              <input type="range" min="0" max="5" value={scores.repartitionHebdo || 0} onChange={(e) => handleLoadChange("repartitionHebdo", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.repartitionHebdo || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.repartitionHebdo <= 2 && "Répartition peu favorable, récupération possiblement insuffisante"}
+                {scores.repartitionHebdo >= 3 && scores.repartitionHebdo <= 4 && "Répartition hebdomadaire correcte"}
+                {scores.repartitionHebdo === 5 && "Très bonne organisation des séances"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Gestion de l’intensité</div>
+              <input type="range" min="0" max="5" value={scores.intensiteCharge || 0} onChange={(e) => handleLoadChange("intensiteCharge", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.intensiteCharge || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.intensiteCharge <= 2 && "Trop de séances dures ou mauvaise distribution de l’intensité"}
+                {scores.intensiteCharge >= 3 && scores.intensiteCharge <= 4 && "Intensité globalement bien répartie"}
+                {scores.intensiteCharge === 5 && "Très bonne maîtrise de l’intensité"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Récupération</div>
+              <input type="range" min="0" max="5" value={scores.recuperationCharge || 0} onChange={(e) => handleLoadChange("recuperationCharge", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.recuperationCharge || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.recuperationCharge <= 2 && "Récupération insuffisante : fatigue, sommeil ou fraîcheur insuffisants"}
+                {scores.recuperationCharge >= 3 && scores.recuperationCharge <= 4 && "Récupération correcte"}
+                {scores.recuperationCharge === 5 && "Très bonne récupération"}
+              </div>
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Tolérance douleur / fatigue</div>
+              <input type="range" min="0" max="5" value={scores.toleranceCharge || 0} onChange={(e) => handleLoadChange("toleranceCharge", e.target.value)} style={sliderStyle} />
+              <div style={scoreText}>{scores.toleranceCharge || 0}/5</div>
+              <div style={interpretStyle}>
+                {scores.toleranceCharge <= 2 && "Tolérance clinique défavorable à la charge actuelle"}
+                {scores.toleranceCharge >= 3 && scores.toleranceCharge <= 4 && "Tolérance globalement correcte"}
+                {scores.toleranceCharge === 5 && "Très bonne tolérance actuelle à la charge"}
+              </div>
+            </div>
+
+            <div style={cardScore}>
+              <div style={{ fontWeight: 900 }}>Score gestion de charge</div>
+              <div style={{ fontSize: 40 }}>{scores.load}/15</div>
+            </div>
+
+            <div style={{ marginTop: 16, display: "grid", gap: 10 }}>
+              {loadNotes.map((note, i) => (
+                <div key={i} style={{ background: BRAND.panel, border: `1px solid ${BRAND.border}`, borderRadius: 16, padding: 14, color: BRAND.text, lineHeight: 1.5 }}>
+                  {note}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={titleStyle}>Note complémentaire</div>
+              <textarea value={patient.loadNote} onChange={(e) => handlePatientChange("loadNote", e.target.value)} style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} />
             </div>
           </div>
         )}
