@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v11";
+const APP_KEY = "kine-expert-roubaix-elite-v12";
 
 const initialPatient = {
   name: "",
@@ -532,6 +532,46 @@ function buildTechniqueInterpretation(scores) {
   return notes;
 }
 
+function buildTechniqueRecommendations(scores) {
+  const recos = [];
+
+  if (scores.cadence <= 2) {
+    recos.push("Cadence basse : proposer une augmentation progressive de 5 à 10%, avec éducatifs de fréquence et foulée plus courte.");
+  } else if (scores.cadence === 3) {
+    recos.push("Cadence correcte mais perfectible : travail de métronome ou repères audio possible sur séances faciles.");
+  }
+
+  if (scores.oscillation <= 2) {
+    recos.push("Oscillation verticale élevée : rechercher une foulée plus rasante, améliorer le gainage actif et limiter la poussée verticale.");
+  } else if (scores.oscillation === 3) {
+    recos.push("Oscillation verticale modérée : travailler l’économie de course et la projection vers l’avant.");
+  }
+
+  if (scores.overstride <= 2) {
+    recos.push("Overstride marqué : favoriser un appui plus proche du centre de masse, augmenter légèrement la fréquence de pas et réduire la longueur de foulée.");
+  } else if (scores.overstride === 3) {
+    recos.push("Placement du pied perfectible : travail technique sur pied sous le bassin et contrôle du freinage.");
+  }
+
+  if (scores.bruit <= 2) {
+    recos.push("Impact sonore élevé : rechercher un appui plus silencieux, améliorer l’absorption active et le contrôle pied-cheville.");
+  } else if (scores.bruit === 3) {
+    recos.push("Bruit modéré : affiner la qualité d’appui et la souplesse d’amortissement.");
+  }
+
+  if (scores.stabiliteBassin <= 2) {
+    recos.push("Stabilité pelvienne insuffisante : renforcer abducteurs, contrôle unipodal et stabilité lombo-pelvienne.");
+  } else if (scores.stabiliteBassin === 3) {
+    recos.push("Contrôle du bassin correct mais perfectible : intégrer travail frontal et stabilité de hanche.");
+  }
+
+  if (recos.length === 0) {
+    recos.push("Technique globalement efficiente : entretenir les acquis avec rappels techniques et renforcement spécifique.");
+  }
+
+  return recos.slice(0, 6);
+}
+
 function buildLoadInterpretation(scores) {
   const notes = [];
 
@@ -726,6 +766,7 @@ export default function RunningClinicElite() {
   const forceInterpretation = useMemo(() => buildForceInterpretation(scores), [scores]);
   const forceRecommendations = useMemo(() => buildForceRecommendations(scores), [scores]);
   const techniqueNotes = useMemo(() => buildTechniqueInterpretation(scores), [scores]);
+  const techniqueRecommendations = useMemo(() => buildTechniqueRecommendations(scores), [scores]);
   const loadNotes = useMemo(() => buildLoadInterpretation(scores), [scores]);
 
   const quadAvg = useMemo(() => (scores.quadLeft + scores.quadRight) / 2, [scores.quadLeft, scores.quadRight]);
@@ -1022,6 +1063,7 @@ export default function RunningClinicElite() {
 
           <div class="card"><h2>Interprétation force</h2><ul>${forceInterpretation.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Interprétation technique</h2><ul>${techniqueNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
+          <div class="card"><h2>Recommandations techniques</h2><ul>${techniqueRecommendations.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Interprétation gestion de charge</h2><ul>${loadNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations</h2><ul>${recommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations force</h2><ul>${forceRecommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
@@ -1498,9 +1540,9 @@ export default function RunningClinicElite() {
                 {scores.cadence === 5 && "Cadence optimale"}
                 {scores.cadence === 4 && "Bonne cadence"}
                 {scores.cadence === 3 && "Cadence correcte"}
-                {scores.cadence === 2 && "Cadence un peu basse"}
-                {scores.cadence === 1 && "Cadence basse"}
-                {scores.cadence === 0 && "Cadence très basse"}
+                {scores.cadence === 2 && "Cadence basse"}
+                {scores.cadence === 1 && "Cadence très basse"}
+                {scores.cadence === 0 && "Cadence insuffisante"}
               </div>
             </div>
 
@@ -1516,9 +1558,12 @@ export default function RunningClinicElite() {
               />
               <div style={scoreText}>{scores.oscillation || 0}/5</div>
               <div style={interpretStyle}>
-                {scores.oscillation <= 2 && "Oscillation excessive → perte d’énergie et contraintes ↑"}
-                {scores.oscillation >= 3 && scores.oscillation <= 4 && "Oscillation correcte"}
-                {scores.oscillation === 5 && "Très bonne économie de course"}
+                {scores.oscillation === 5 && "Très faible oscillation – excellente économie"}
+                {scores.oscillation === 4 && "Faible oscillation – bon contrôle"}
+                {scores.oscillation === 3 && "Oscillation modérée"}
+                {scores.oscillation === 2 && "Oscillation élevée"}
+                {scores.oscillation === 1 && "Oscillation très élevée"}
+                {scores.oscillation === 0 && "Oscillation pathologique"}
               </div>
             </div>
 
@@ -1610,6 +1655,27 @@ export default function RunningClinicElite() {
                   {note}
                 </div>
               ))}
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={titleStyle}>Recommandations automatiques</div>
+              <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+                {techniqueRecommendations.map((item, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: BRAND.panel,
+                      border: `1px solid ${BRAND.border}`,
+                      borderRadius: 16,
+                      padding: 14,
+                      color: BRAND.text,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={{ marginTop: 16 }}>
