@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v10";
+const APP_KEY = "kine-expert-roubaix-elite-v11";
 
 const initialPatient = {
   name: "",
@@ -96,6 +96,7 @@ const initialScores = {
   flex1Note: 0,
 
   cadence: 0,
+  cadenceValue: "",
   oscillation: 0,
   bruit: 0,
   overstride: 0,
@@ -154,6 +155,33 @@ const forceTests = [
   { label: "Fléchisseur du 1", left: "flex1Left", right: "flex1Right", note: "flex1Note" },
 ];
 
+const bruitOptions = [
+  { value: 0, label: "Non évaluable" },
+  { value: 1, label: "Impact très bruyant" },
+  { value: 2, label: "Impact bruyant" },
+  { value: 3, label: "Impact modéré" },
+  { value: 4, label: "Impact discret" },
+  { value: 5, label: "Course silencieuse" },
+];
+
+const overstrideOptions = [
+  { value: 0, label: "Non évaluable" },
+  { value: 1, label: "Overstride très marqué" },
+  { value: 2, label: "Overstride marqué" },
+  { value: 3, label: "Overstride modéré" },
+  { value: 4, label: "Léger overstride" },
+  { value: 5, label: "Pied sous le bassin" },
+];
+
+const stabiliteOptions = [
+  { value: 0, label: "Non évaluable" },
+  { value: 1, label: "Instabilité majeure" },
+  { value: 2, label: "Instabilité visible" },
+  { value: 3, label: "Contrôle correct" },
+  { value: 4, label: "Bonne stabilité" },
+  { value: 5, label: "Stabilité optimale" },
+];
+
 function getLevel(total) {
   if (total < 50) return { label: "Risque élevé", color: BRAND.red };
   if (total < 65) return { label: "Fragile", color: BRAND.orange };
@@ -193,6 +221,17 @@ function symmetryText(left, right) {
   if (diff === 0) return "Symétrie excellente";
   if (diff === 1) return "Légère asymétrie";
   return "Asymétrie marquée";
+}
+
+function computeCadenceScore(spm) {
+  const value = Number(spm);
+  if (!spm || spm === "") return 0;
+  if (value >= 180) return 5;
+  if (value >= 175) return 4;
+  if (value >= 170) return 3;
+  if (value >= 165) return 2;
+  if (value >= 160) return 1;
+  return 0;
 }
 
 function computeAnamnesisTotal(patient) {
@@ -741,6 +780,18 @@ export default function RunningClinicElite() {
     });
   };
 
+  const handleCadenceInput = (value) => {
+    setScores((prev) => {
+      const next = {
+        ...prev,
+        cadenceValue: value,
+        cadence: computeCadenceScore(value),
+      };
+      next.technique = computeTechniqueTotal(next);
+      return next;
+    });
+  };
+
   const handleTechniqueChange = (key, value) => {
     setScores((prev) => {
       const next = { ...prev, [key]: Number(value) };
@@ -1062,6 +1113,17 @@ export default function RunningClinicElite() {
     background: BRAND.panel,
     border: `1px solid ${BRAND.border}`,
   };
+
+  const optionButton = (active) => ({
+    padding: 12,
+    borderRadius: 12,
+    border: `1px solid ${active ? BRAND.red : BRAND.border}`,
+    background: active ? BRAND.red : BRAND.panel,
+    color: "white",
+    textAlign: "left",
+    cursor: "pointer",
+    width: "100%",
+  });
 
   const renderMain = () => (
     <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 18 }}>
@@ -1423,19 +1485,35 @@ export default function RunningClinicElite() {
             </div>
 
             <div style={boxStyle}>
-              <div style={titleStyle}>Cadence</div>
-              <input type="range" min="0" max="5" value={scores.cadence || 0} onChange={(e) => handleTechniqueChange("cadence", e.target.value)} style={sliderStyle} />
-              <div style={scoreText}>{scores.cadence || 0}/5</div>
+              <div style={titleStyle}>Cadence (spm)</div>
+              <input
+                type="number"
+                value={scores.cadenceValue || ""}
+                onChange={(e) => handleCadenceInput(e.target.value)}
+                placeholder="Ex : 172"
+                style={inputStyle}
+              />
+              <div style={{ marginTop: 10, fontWeight: 800 }}>Note automatique : {scores.cadence}/5</div>
               <div style={interpretStyle}>
-                {scores.cadence <= 2 && "Cadence faible → overstride probable, augmentation des contraintes mécaniques"}
-                {scores.cadence >= 3 && scores.cadence <= 4 && "Cadence correcte mais améliorable"}
-                {scores.cadence === 5 && "Cadence optimale → économie de course"}
+                {scores.cadence === 5 && "Cadence optimale"}
+                {scores.cadence === 4 && "Bonne cadence"}
+                {scores.cadence === 3 && "Cadence correcte"}
+                {scores.cadence === 2 && "Cadence un peu basse"}
+                {scores.cadence === 1 && "Cadence basse"}
+                {scores.cadence === 0 && "Cadence très basse"}
               </div>
             </div>
 
             <div style={boxStyle}>
               <div style={titleStyle}>Oscillation verticale</div>
-              <input type="range" min="0" max="5" value={scores.oscillation || 0} onChange={(e) => handleTechniqueChange("oscillation", e.target.value)} style={sliderStyle} />
+              <input
+                type="range"
+                min="0"
+                max="5"
+                value={scores.oscillation || 0}
+                onChange={(e) => handleTechniqueChange("oscillation", e.target.value)}
+                style={sliderStyle}
+              />
               <div style={scoreText}>{scores.oscillation || 0}/5</div>
               <div style={interpretStyle}>
                 {scores.oscillation <= 2 && "Oscillation excessive → perte d’énergie et contraintes ↑"}
@@ -1446,34 +1524,61 @@ export default function RunningClinicElite() {
 
             <div style={boxStyle}>
               <div style={titleStyle}>Bruit à l’impact</div>
-              <input type="range" min="0" max="5" value={scores.bruit || 0} onChange={(e) => handleTechniqueChange("bruit", e.target.value)} style={sliderStyle} />
-              <div style={scoreText}>{scores.bruit || 0}/5</div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {bruitOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleTechniqueChange("bruit", opt.value)}
+                    style={optionButton(scores.bruit === opt.value)}
+                  >
+                    {opt.value} — {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontWeight: 800 }}>Note : {scores.bruit}/5</div>
               <div style={interpretStyle}>
-                {scores.bruit <= 2 && "Impact sonore élevé → contraintes mécaniques importantes"}
-                {scores.bruit >= 3 && scores.bruit <= 4 && "Impact modéré"}
-                {scores.bruit === 5 && "Course silencieuse → bonne absorption active"}
+                {bruitOptions.find((o) => o.value === scores.bruit)?.label}
               </div>
             </div>
 
             <div style={boxStyle}>
               <div style={titleStyle}>Overstride</div>
-              <input type="range" min="0" max="5" value={scores.overstride || 0} onChange={(e) => handleTechniqueChange("overstride", e.target.value)} style={sliderStyle} />
-              <div style={scoreText}>{scores.overstride || 0}/5</div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {overstrideOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleTechniqueChange("overstride", opt.value)}
+                    style={optionButton(scores.overstride === opt.value)}
+                  >
+                    {opt.value} — {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontWeight: 800 }}>Note : {scores.overstride}/5</div>
               <div style={interpretStyle}>
-                {scores.overstride <= 2 && "Overstride marqué → freinage important et surcharge mécanique probable"}
-                {scores.overstride >= 3 && scores.overstride <= 4 && "Placement du pied globalement correct"}
-                {scores.overstride === 5 && "Placement du pied efficient, sans sur-allongement notable"}
+                {overstrideOptions.find((o) => o.value === scores.overstride)?.label}
               </div>
             </div>
 
             <div style={boxStyle}>
               <div style={titleStyle}>Stabilité du bassin</div>
-              <input type="range" min="0" max="5" value={scores.stabiliteBassin || 0} onChange={(e) => handleTechniqueChange("stabiliteBassin", e.target.value)} style={sliderStyle} />
-              <div style={scoreText}>{scores.stabiliteBassin || 0}/5</div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {stabiliteOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleTechniqueChange("stabiliteBassin", opt.value)}
+                    style={optionButton(scores.stabiliteBassin === opt.value)}
+                  >
+                    {opt.value} — {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontWeight: 800 }}>Note : {scores.stabiliteBassin}/5</div>
               <div style={interpretStyle}>
-                {scores.stabiliteBassin <= 2 && "Stabilité pelvienne insuffisante → contrôle proximal à renforcer"}
-                {scores.stabiliteBassin >= 3 && scores.stabiliteBassin <= 4 && "Stabilité du bassin correcte"}
-                {scores.stabiliteBassin === 5 && "Très bon contrôle du bassin pendant la course"}
+                {stabiliteOptions.find((o) => o.value === scores.stabiliteBassin)?.label}
               </div>
             </div>
 
@@ -1509,7 +1614,11 @@ export default function RunningClinicElite() {
 
             <div style={{ marginTop: 16 }}>
               <div style={titleStyle}>Note complémentaire</div>
-              <textarea value={patient.techniqueNote} onChange={(e) => handlePatientChange("techniqueNote", e.target.value)} style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} />
+              <textarea
+                value={patient.techniqueNote}
+                onChange={(e) => handlePatientChange("techniqueNote", e.target.value)}
+                style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
+              />
             </div>
           </div>
         )}
@@ -1591,7 +1700,11 @@ export default function RunningClinicElite() {
 
             <div style={{ marginTop: 16 }}>
               <div style={titleStyle}>Note complémentaire</div>
-              <textarea value={patient.loadNote} onChange={(e) => handlePatientChange("loadNote", e.target.value)} style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} />
+              <textarea
+                value={patient.loadNote}
+                onChange={(e) => handlePatientChange("loadNote", e.target.value)}
+                style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
+              />
             </div>
           </div>
         )}
