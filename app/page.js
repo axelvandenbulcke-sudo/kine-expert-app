@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v9";
+const APP_KEY = "kine-expert-roubaix-elite-v10";
 
 const initialPatient = {
   name: "",
@@ -36,6 +36,14 @@ const initialPatient = {
   painLevel: "",
   shoes: "",
   surface: "",
+
+  injuryHistory: "",
+  painDuration: "",
+  painTriggers: "",
+  painBehavior: "",
+  availability: "",
+  anamnesisNote: "",
+
   mobilityNote: "",
   forceNote: "",
   techniqueNote: "",
@@ -185,6 +193,114 @@ function symmetryText(left, right) {
   if (diff === 0) return "Symétrie excellente";
   if (diff === 1) return "Légère asymétrie";
   return "Asymétrie marquée";
+}
+
+function computeAnamnesisTotal(patient) {
+  let total = 0;
+
+  const injuryHistory = (patient.injuryHistory || "").toLowerCase();
+  const painDuration = (patient.painDuration || "").toLowerCase();
+  const painTriggers = (patient.painTriggers || "").toLowerCase();
+  const painBehavior = (patient.painBehavior || "").toLowerCase();
+  const availability = (patient.availability || "").toLowerCase();
+
+  if (!injuryHistory.trim()) total += 4;
+  else if (
+    injuryHistory.includes("récidive") ||
+    injuryHistory.includes("recidive") ||
+    injuryHistory.includes("plusieurs") ||
+    injuryHistory.includes("multiple")
+  ) {
+    total += 1;
+  } else {
+    total += 2;
+  }
+
+  if (!painDuration.trim()) total += 2;
+  else if (
+    painDuration.includes("jour") ||
+    painDuration.includes("semaine") ||
+    painDuration.includes("2 semaines") ||
+    painDuration.includes("3 semaines")
+  ) {
+    total += 4;
+  } else if (
+    painDuration.includes("mois") ||
+    painDuration.includes("3 mois") ||
+    painDuration.includes("4 mois") ||
+    painDuration.includes("chronique")
+  ) {
+    total += 1;
+  } else {
+    total += 2;
+  }
+
+  if (!painTriggers.trim()) total += 3;
+  else if (
+    painTriggers.includes("repos") ||
+    painTriggers.includes("marche") ||
+    painTriggers.includes("quotidien") ||
+    painTriggers.includes("dès le début") ||
+    painTriggers.includes("des le debut")
+  ) {
+    total += 1;
+  } else if (
+    painTriggers.includes(">") ||
+    painTriggers.includes("10 km") ||
+    painTriggers.includes("fractionné") ||
+    painTriggers.includes("fractionne") ||
+    painTriggers.includes("vitesse") ||
+    painTriggers.includes("descente")
+  ) {
+    total += 2;
+  } else {
+    total += 3;
+  }
+
+  if (!painBehavior.trim()) total += 2;
+  else if (
+    painBehavior.includes("raideur matinale") ||
+    painBehavior.includes("augmente après") ||
+    painBehavior.includes("augmente apres") ||
+    painBehavior.includes("boite") ||
+    painBehavior.includes("persiste")
+  ) {
+    total += 1;
+  } else if (
+    painBehavior.includes("échauffement") ||
+    painBehavior.includes("echauffement") ||
+    painBehavior.includes("diminue à chaud") ||
+    painBehavior.includes("diminue a chaud")
+  ) {
+    total += 4;
+  } else {
+    total += 2;
+  }
+
+  if (!availability.trim()) total += 2;
+  else if (
+    availability.includes("aucun temps") ||
+    availability.includes("pas le temps") ||
+    availability.includes("0") ||
+    availability.includes("une séance") ||
+    availability.includes("1 séance")
+  ) {
+    total += 1;
+  } else if (
+    availability.includes("2 séances") ||
+    availability.includes("2 seances") ||
+    availability.includes("3 séances") ||
+    availability.includes("3 seances") ||
+    availability.includes("salle") ||
+    availability.includes("motivé") ||
+    availability.includes("motive")
+  ) {
+    total += 4;
+  } else {
+    total += 2;
+  }
+
+  return Math.max(0, Math.min(20, total));
 }
 
 function computeMobilityTotal(scores) {
@@ -525,19 +641,15 @@ function radarSvg(scores) {
     <polygon points="${ringPoints(0.5)}" fill="none" stroke="#454545" stroke-width="1" />
     <polygon points="${ringPoints(0.75)}" fill="none" stroke="#454545" stroke-width="1" />
     <polygon points="${ringPoints(1)}" fill="none" stroke="#454545" stroke-width="1" />
-    ${data
-      .map((d) => {
-        const p = point(d.angle, radius);
-        return `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="#454545" stroke-width="1" />`;
-      })
-      .join("")}
+    ${data.map((d) => {
+      const p = point(d.angle, radius);
+      return `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="#454545" stroke-width="1" />`;
+    }).join("")}
     <polygon points="${poly}" fill="#e11d2e" fill-opacity="0.38" stroke="#e11d2e" stroke-width="2.5" />
-    ${data
-      .map((d) => {
-        const p = point(d.angle, radius + 28);
-        return `<text x="${p.x}" y="${p.y}" text-anchor="middle" font-size="12" fill="#d4d4d8" font-family="Arial, sans-serif">${d.label}</text>`;
-      })
-      .join("")}
+    ${data.map((d) => {
+      const p = point(d.angle, radius + 28);
+      return `<text x="${p.x}" y="${p.y}" text-anchor="middle" font-size="12" fill="#d4d4d8" font-family="Arial, sans-serif">${d.label}</text>`;
+    }).join("")}
   </svg>`;
 }
 
@@ -591,7 +703,14 @@ export default function RunningClinicElite() {
   }, [patient.weight, patient.height]);
 
   const handlePatientChange = (key, value) => {
-    setPatient((prev) => ({ ...prev, [key]: value }));
+    setPatient((prev) => {
+      const nextPatient = { ...prev, [key]: value };
+      setScores((prevScores) => ({
+        ...prevScores,
+        anamnesis: computeAnamnesisTotal(nextPatient),
+      }));
+      return nextPatient;
+    });
   };
 
   const handleScoreChange = (key, value) => {
@@ -826,9 +945,7 @@ export default function RunningClinicElite() {
 
           <div class="card">
             <h2>Radar clinique</h2>
-            <div class="radar-wrap">
-              ${radarSvg(scores)}
-            </div>
+            <div class="radar-wrap">${radarSvg(scores)}</div>
           </div>
 
           <div class="card">
@@ -844,13 +961,20 @@ export default function RunningClinicElite() {
             </table>
           </div>
 
+          <div class="card"><h2>Historique de course</h2><p>${patient.runningHistory || "Non renseigné."}</p></div>
+          <div class="card"><h2>Antécédents</h2><p>${patient.injuryHistory || "Non renseigné."}</p></div>
+          <div class="card"><h2>Ancienneté</h2><p>${patient.painDuration || "Non renseigné."}</p></div>
+          <div class="card"><h2>Déclencheurs</h2><p>${patient.painTriggers || "Non renseigné."}</p></div>
+          <div class="card"><h2>Comportement de la douleur</h2><p>${patient.painBehavior || "Non renseigné."}</p></div>
+          <div class="card"><h2>Disponibilité</h2><p>${patient.availability || "Non renseigné."}</p></div>
+          <div class="card"><h2>Note anamnèse</h2><p>${patient.anamnesisNote || "Aucune note."}</p></div>
+
           <div class="card"><h2>Interprétation force</h2><ul>${forceInterpretation.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Interprétation technique</h2><ul>${techniqueNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Interprétation gestion de charge</h2><ul>${loadNotes.map((item) => `<li>${item}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations</h2><ul>${recommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Recommandations force</h2><ul>${forceRecommendations.map((r) => `<li>${r}</li>`).join("")}</ul></div>
           <div class="card"><h2>Plan automatique</h2><ul>${autoPlan.map((r) => `<li>${r}</li>`).join("")}</ul></div>
-          <div class="card"><h2>Historique de course</h2><p>${patient.runningHistory || "Non renseigné."}</p></div>
           <div class="card"><h2>Note complémentaire mobilité</h2><p>${patient.mobilityNote || "Aucune note."}</p></div>
           <div class="card"><h2>Note complémentaire force</h2><p>${patient.forceNote || "Aucune note."}</p></div>
           <div class="card"><h2>Note complémentaire technique</h2><p>${patient.techniqueNote || "Aucune note."}</p></div>
@@ -1032,6 +1156,85 @@ export default function RunningClinicElite() {
             <div style={{ marginTop: 18 }}>
               <div style={{ color: BRAND.muted, fontSize: 14, marginBottom: 10, fontWeight: 700 }}>Notes complémentaires</div>
               <textarea value={patient.notes} onChange={(e) => handlePatientChange("notes", e.target.value)} placeholder="Notes cliniques" style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} />
+            </div>
+          </div>
+        )}
+
+        {step === 1 && (
+          <div style={card}>
+            <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Anamnèse</div>
+            <div style={{ color: BRAND.muted, marginBottom: 16 }}>
+              Analyse du contexte, des antécédents et du comportement de la douleur.
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Antécédents de blessure</div>
+              <textarea
+                value={patient.injuryHistory}
+                onChange={(e) => handlePatientChange("injuryHistory", e.target.value)}
+                placeholder="Ex : TFL droit 2023, tendinopathie Achille G 2022..."
+                style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
+              />
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Ancienneté du problème</div>
+              <input
+                value={patient.painDuration}
+                onChange={(e) => handlePatientChange("painDuration", e.target.value)}
+                placeholder="Ex : 2 semaines, 3 mois, chronique..."
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Déclencheurs</div>
+              <textarea
+                value={patient.painTriggers}
+                onChange={(e) => handlePatientChange("painTriggers", e.target.value)}
+                placeholder="Ex : à froid, >10 km, vitesse, descente, changement chaussures..."
+                style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
+              />
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Comportement de la douleur</div>
+              <textarea
+                value={patient.painBehavior}
+                onChange={(e) => handlePatientChange("painBehavior", e.target.value)}
+                placeholder="Ex : diminue à chaud, augmente après, raideur matinale..."
+                style={{ ...inputStyle, minHeight: 100, resize: "vertical" }}
+              />
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Disponibilité pour le plan</div>
+              <input
+                value={patient.availability}
+                onChange={(e) => handlePatientChange("availability", e.target.value)}
+                placeholder="Ex : 2 séances renfo / semaine, peu de temps, accès salle..."
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={boxStyle}>
+              <div style={titleStyle}>Score anamnèse automatique</div>
+              <div style={{ fontSize: 40, fontWeight: 900 }}>{scores.anamnesis}/20</div>
+              <div style={interpretStyle}>
+                {scores.anamnesis <= 7 && "Profil à risque élevé (douleur, charge ou antécédents défavorables)"}
+                {scores.anamnesis >= 8 && scores.anamnesis <= 14 && "Profil intermédiaire à surveiller"}
+                {scores.anamnesis >= 15 && "Profil favorable"}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={titleStyle}>Note complémentaire</div>
+              <textarea
+                value={patient.anamnesisNote}
+                onChange={(e) => handlePatientChange("anamnesisNote", e.target.value)}
+                placeholder="Synthèse clinique libre, éléments importants à retenir..."
+                style={{ ...inputStyle, minHeight: 120, resize: "vertical" }}
+              />
             </div>
           </div>
         )}
