@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v12";
+const APP_KEY = "kine-expert-roubaix-elite-v13";
 
 const initialPatient = {
   name: "",
@@ -60,17 +60,36 @@ const initialScores = {
 
   deepSquatLeft: 0,
   deepSquatRight: 0,
+  deepSquatValueLeft: "",
+  deepSquatValueRight: "",
+
   ankleKneeWallLeft: 0,
   ankleKneeWallRight: 0,
+  ankleKneeWallValueLeft: "",
+  ankleKneeWallValueRight: "",
+
   fingerFloor: 0,
+  fingerFloorValue: "",
+
   calfRaiseLeft: 0,
   calfRaiseRight: 0,
+  calfRaiseValueLeft: "",
+  calfRaiseValueRight: "",
+
   shortFootLeft: 0,
   shortFootRight: 0,
+  shortFootValueLeft: "",
+  shortFootValueRight: "",
+
   singleLegSquatLeft: 0,
   singleLegSquatRight: 0,
+  singleLegSquatValueLeft: "",
+  singleLegSquatValueRight: "",
+
   singleHopLeft: 0,
   singleHopRight: 0,
+  singleHopValueLeft: "",
+  singleHopValueRight: "",
 
   quadLeft: 0,
   quadRight: 0,
@@ -134,16 +153,6 @@ const maxScores = {
   technique: 25,
   load: 15,
 };
-
-const mobilityTests = [
-  { label: "Deep squat", left: "deepSquatLeft", right: "deepSquatRight", max: 3 },
-  { label: "Ankle knee to wall", left: "ankleKneeWallLeft", right: "ankleKneeWallRight", max: 3 },
-  { label: "Distance doigt/sol", single: "fingerFloor", max: 3 },
-  { label: "Single leg calf raise", left: "calfRaiseLeft", right: "calfRaiseRight", max: 3 },
-  { label: "Short foot test", left: "shortFootLeft", right: "shortFootRight", max: 3 },
-  { label: "Single leg squat", left: "singleLegSquatLeft", right: "singleLegSquatRight", max: 3 },
-  { label: "Single hop test", left: "singleHopLeft", right: "singleHopRight", max: 3 },
-];
 
 const forceTests = [
   { label: "Quadriceps", left: "quadLeft", right: "quadRight", note: "quadNote" },
@@ -352,7 +361,7 @@ function computeMobilityTotal(scores) {
     (scores.singleLegSquatLeft + scores.singleLegSquatRight) / 2 +
     (scores.singleHopLeft + scores.singleHopRight) / 2;
 
-  return Math.round((totalRaw / 21) * 20);
+  return Math.round((totalRaw / 35) * 20);
 }
 
 function computeSmartForceTotal(scores) {
@@ -413,25 +422,25 @@ function computeLoadTotal(scores) {
 function mobilityInterpretations(scores) {
   const out = [];
 
-  if (Math.min(scores.ankleKneeWallLeft, scores.ankleKneeWallRight) <= 1) {
+  if (Math.min(scores.ankleKneeWallLeft, scores.ankleKneeWallRight) <= 2) {
     out.push("Déficit de mobilité de cheville : possible impact sur squat, absorption et contraintes distales.");
   }
-  if (Math.min(scores.calfRaiseLeft, scores.calfRaiseRight) <= 1) {
+  if (Math.min(scores.calfRaiseLeft, scores.calfRaiseRight) <= 2) {
     out.push("Endurance/force du triceps sural insuffisante : à relier au risque tendon d’Achille et à la perte d’économie de course.");
   }
-  if (Math.min(scores.shortFootLeft, scores.shortFootRight) <= 1) {
+  if (Math.min(scores.shortFootLeft, scores.shortFootRight) <= 2) {
     out.push("Contrôle actif du pied faible : travailler arche plantaire, stabilité et transmission des appuis.");
   }
-  if (Math.min(scores.singleLegSquatLeft, scores.singleLegSquatRight) <= 1) {
+  if (Math.min(scores.singleLegSquatLeft, scores.singleLegSquatRight) <= 2) {
     out.push("Contrôle unipodal déficitaire : surveiller valgus, stabilité pelvienne et contrôle proximal.");
   }
-  if (Math.min(scores.singleHopLeft, scores.singleHopRight) <= 1) {
+  if (Math.min(scores.singleHopLeft, scores.singleHopRight) <= 2) {
     out.push("Capacité de restitution/réactivité diminuée : à corréler avec la tolérance mécanique à la course.");
   }
   if (
-    Math.abs(scores.deepSquatLeft - scores.deepSquatRight) >= 2 ||
-    Math.abs(scores.singleLegSquatLeft - scores.singleLegSquatRight) >= 2 ||
-    Math.abs(scores.singleHopLeft - scores.singleHopRight) >= 2
+    asymmetryPercent(scores.deepSquatLeft, scores.deepSquatRight) >= 20 ||
+    asymmetryPercent(scores.singleLegSquatLeft, scores.singleLegSquatRight) >= 20 ||
+    asymmetryPercent(scores.singleHopLeft, scores.singleHopRight) >= 20
   ) {
     out.push("Asymétrie G/D notable : à intégrer dans la stratégie de renforcement et la reprise de charge.");
   }
@@ -720,16 +729,142 @@ function radarSvg(scores) {
     <polygon points="${ringPoints(0.5)}" fill="none" stroke="#454545" stroke-width="1" />
     <polygon points="${ringPoints(0.75)}" fill="none" stroke="#454545" stroke-width="1" />
     <polygon points="${ringPoints(1)}" fill="none" stroke="#454545" stroke-width="1" />
-    ${data.map((d) => {
-      const p = point(d.angle, radius);
-      return `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="#454545" stroke-width="1" />`;
-    }).join("")}
+    ${data
+      .map((d) => {
+        const p = point(d.angle, radius);
+        return `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="#454545" stroke-width="1" />`;
+      })
+      .join("")}
     <polygon points="${poly}" fill="#e11d2e" fill-opacity="0.38" stroke="#e11d2e" stroke-width="2.5" />
-    ${data.map((d) => {
-      const p = point(d.angle, radius + 28);
-      return `<text x="${p.x}" y="${p.y}" text-anchor="middle" font-size="12" fill="#d4d4d8" font-family="Arial, sans-serif">${d.label}</text>`;
-    }).join("")}
+    ${data
+      .map((d) => {
+        const p = point(d.angle, radius + 28);
+        return `<text x="${p.x}" y="${p.y}" text-anchor="middle" font-size="12" fill="#d4d4d8" font-family="Arial, sans-serif">${d.label}</text>`;
+      })
+      .join("")}
   </svg>`;
+}
+
+function ScoreSelector({ value, onChange }) {
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+      {[0, 1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            border: `1px solid ${value === n ? BRAND.red : BRAND.border}`,
+            background: value === n ? BRAND.red : BRAND.panel,
+            color: "white",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MobilityTestCard({
+  title,
+  leftScore,
+  rightScore,
+  leftValue,
+  rightValue,
+  leftValuePlaceholder,
+  rightValuePlaceholder,
+  leftValueLabel,
+  rightValueLabel,
+  onLeftValueChange,
+  onRightValueChange,
+  onLeftScoreChange,
+  onRightScoreChange,
+  guidance,
+  symmetry,
+}) {
+  return (
+    <div style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontWeight: 900, fontSize: 17 }}>{title}</div>
+        <div
+          style={{
+            padding: "8px 12px",
+            borderRadius: 999,
+            background: testColor((leftScore + rightScore) / 2, 5),
+            color: "white",
+            fontWeight: 800,
+            fontSize: 13,
+          }}
+        >
+          {Math.round((((leftScore || 0) + (rightScore || 0)) / 2) * 10) / 10}/5
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div>
+          <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>{leftValueLabel}</div>
+          <input type="text" value={leftValue || ""} onChange={(e) => onLeftValueChange(e.target.value)} placeholder={leftValuePlaceholder} style={inputStyle} />
+          <ScoreSelector value={leftScore} onChange={onLeftScoreChange} />
+          <div style={{ marginTop: 8, fontWeight: 800 }}>Note : {leftScore}/5</div>
+        </div>
+
+        <div>
+          <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>{rightValueLabel}</div>
+          <input type="text" value={rightValue || ""} onChange={(e) => onRightValueChange(e.target.value)} placeholder={rightValuePlaceholder} style={inputStyle} />
+          <ScoreSelector value={rightScore} onChange={onRightScoreChange} />
+          <div style={{ marginTop: 8, fontWeight: 800 }}>Note : {rightScore}/5</div>
+        </div>
+
+        <div style={{ gridColumn: "1 / -1", color: BRAND.muted, fontSize: 13, lineHeight: 1.5, marginTop: 6 }}>{guidance}</div>
+        <div style={{ gridColumn: "1 / -1", color: symmetry >= 20 ? BRAND.red : symmetry >= 10 ? BRAND.orange : BRAND.muted, fontSize: 13, fontWeight: 700 }}>
+          Asymétrie : {symmetry.toFixed(1)}% — {symmetryText(leftScore || 0, rightScore || 0)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobilitySingleCard({
+  title,
+  value,
+  score,
+  valueLabel,
+  placeholder,
+  onValueChange,
+  onScoreChange,
+  guidance,
+}) {
+  return (
+    <div style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontWeight: 900, fontSize: 17 }}>{title}</div>
+        <div
+          style={{
+            padding: "8px 12px",
+            borderRadius: 999,
+            background: testColor(score, 5),
+            color: "white",
+            fontWeight: 800,
+            fontSize: 13,
+          }}
+        >
+          {score}/5
+        </div>
+      </div>
+
+      <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>{valueLabel}</div>
+      <input type="text" value={value || ""} onChange={(e) => onValueChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
+      <ScoreSelector value={score} onChange={onScoreChange} />
+      <div style={{ marginTop: 8, fontWeight: 800 }}>Note : {score}/5</div>
+      <div style={{ color: BRAND.muted, fontSize: 13, lineHeight: 1.5, marginTop: 10 }}>{guidance}</div>
+    </div>
+  );
 }
 
 export default function RunningClinicElite() {
@@ -793,11 +928,14 @@ export default function RunningClinicElite() {
     });
   };
 
-  const handleScoreChange = (key, value) => {
-    setScores((prev) => ({ ...prev, [key]: Number(value) }));
+  const handleMobilityValueChange = (key, value) => {
+    setScores((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
-  const handleMobilityTestChange = (key, value) => {
+  const handleMobilityScoreChange = (key, value) => {
     setScores((prev) => {
       const next = { ...prev, [key]: Number(value) };
       next.mobility = computeMobilityTotal(next);
@@ -909,7 +1047,7 @@ export default function RunningClinicElite() {
     const html = `
     <html>
       <head>
-        <title>Bilan Running V4</title>
+        <title>Bilan Running V5</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>
           @page { size: A4; margin: 12mm; }
@@ -1347,52 +1485,127 @@ export default function RunningClinicElite() {
           <div style={card}>
             <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 14 }}>Tests mobilité</div>
             <div style={{ color: BRAND.muted, marginBottom: 16, fontSize: 14 }}>
-              Notation par test de 0 à 3, avec lecture de la symétrie gauche / droite.
+              Valeur mesurée + cotation manuelle 0 à 5. Le score mobilité est recalculé automatiquement.
             </div>
 
-            {mobilityTests.map((test) => {
-              const leftValue = test.left ? scores[test.left] : null;
-              const rightValue = test.right ? scores[test.right] : null;
-              const singleValue = test.single ? scores[test.single] : null;
-              const meanScore = test.single ? singleValue : Math.round((((leftValue || 0) + (rightValue || 0)) / 2) * 10) / 10;
-              const color = testColor(meanScore, test.max);
+            <MobilityTestCard
+              title="Deep squat"
+              leftScore={scores.deepSquatLeft}
+              rightScore={scores.deepSquatRight}
+              leftValue={scores.deepSquatValueLeft}
+              rightValue={scores.deepSquatValueRight}
+              leftValueLabel="Gauche / observation"
+              rightValueLabel="Droite / observation"
+              leftValuePlaceholder="Ex : limité, valgus, talon décolle"
+              rightValuePlaceholder="Ex : fluide, stable"
+              onLeftValueChange={(value) => handleMobilityValueChange("deepSquatValueLeft", value)}
+              onRightValueChange={(value) => handleMobilityValueChange("deepSquatValueRight", value)}
+              onLeftScoreChange={(value) => handleMobilityScoreChange("deepSquatLeft", value)}
+              onRightScoreChange={(value) => handleMobilityScoreChange("deepSquatRight", value)}
+              symmetry={asymmetryPercent(scores.deepSquatLeft, scores.deepSquatRight)}
+              guidance="0 impossible ou douleur · 1 très limité / compensation majeure · 2 amplitude faible / plusieurs compensations · 3 correct mais limité ou compensé · 4 bon squat / léger défaut · 5 complet, fluide, stable"
+            />
 
-              return (
-                <div key={test.label} style={{ background: BRAND.panel2, border: `1px solid ${BRAND.border}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 14 }}>
-                    <div style={{ fontWeight: 900, fontSize: 17 }}>{test.label}</div>
-                    <div style={{ padding: "8px 12px", borderRadius: 999, background: color, color: "white", fontWeight: 800, fontSize: 13 }}>
-                      {meanScore}/{test.max}
-                    </div>
-                  </div>
+            <MobilityTestCard
+              title="Ankle knee to wall"
+              leftScore={scores.ankleKneeWallLeft}
+              rightScore={scores.ankleKneeWallRight}
+              leftValue={scores.ankleKneeWallValueLeft}
+              rightValue={scores.ankleKneeWallValueRight}
+              leftValueLabel="Gauche (cm)"
+              rightValueLabel="Droite (cm)"
+              leftValuePlaceholder="Ex : 9"
+              rightValuePlaceholder="Ex : 11"
+              onLeftValueChange={(value) => handleMobilityValueChange("ankleKneeWallValueLeft", value)}
+              onRightValueChange={(value) => handleMobilityValueChange("ankleKneeWallValueRight", value)}
+              onLeftScoreChange={(value) => handleMobilityScoreChange("ankleKneeWallLeft", value)}
+              onRightScoreChange={(value) => handleMobilityScoreChange("ankleKneeWallRight", value)}
+              symmetry={asymmetryPercent(scores.ankleKneeWallLeft, scores.ankleKneeWallRight)}
+              guidance="Repère pratique : 0 < 5 cm · 1 = 5–6 cm · 2 = 6–8 cm · 3 = 8–10 cm · 4 = 10–12 cm · 5 > 12 cm"
+            />
 
-                  {test.single ? (
-                    <div>
-                      <input type="range" min="0" max={test.max} value={singleValue} onChange={(e) => handleMobilityTestChange(test.single, e.target.value)} style={{ width: "100%", accentColor: BRAND.red }} />
-                      <div style={{ marginTop: 8, fontWeight: 800 }}>{singleValue}/{test.max}</div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div>
-                        <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Gauche</div>
-                        <input type="range" min="0" max={test.max} value={leftValue} onChange={(e) => handleMobilityTestChange(test.left, e.target.value)} style={{ width: "100%", accentColor: BRAND.red }} />
-                        <div style={{ marginTop: 8, fontWeight: 800 }}>{leftValue}/{test.max}</div>
-                      </div>
+            <MobilitySingleCard
+              title="Distance doigt/sol"
+              value={scores.fingerFloorValue}
+              score={scores.fingerFloor}
+              valueLabel="Distance (cm)"
+              placeholder="Ex : 8"
+              onValueChange={(value) => handleMobilityValueChange("fingerFloorValue", value)}
+              onScoreChange={(value) => handleMobilityScoreChange("fingerFloor", value)}
+              guidance="Repère pratique : 0 > 20 cm · 1 = 15–20 cm · 2 = 10–15 cm · 3 = 5–10 cm · 4 < 5 cm · 5 = mains au sol"
+            />
 
-                      <div>
-                        <div style={{ color: BRAND.muted, fontSize: 13, marginBottom: 8 }}>Droite</div>
-                        <input type="range" min="0" max={test.max} value={rightValue} onChange={(e) => handleMobilityTestChange(test.right, e.target.value)} style={{ width: "100%", accentColor: BRAND.red }} />
-                        <div style={{ marginTop: 8, fontWeight: 800 }}>{rightValue}/{test.max}</div>
-                      </div>
+            <MobilityTestCard
+              title="Single leg calf raise"
+              leftScore={scores.calfRaiseLeft}
+              rightScore={scores.calfRaiseRight}
+              leftValue={scores.calfRaiseValueLeft}
+              rightValue={scores.calfRaiseValueRight}
+              leftValueLabel="Gauche (répétitions)"
+              rightValueLabel="Droite (répétitions)"
+              leftValuePlaceholder="Ex : 18"
+              rightValuePlaceholder="Ex : 22"
+              onLeftValueChange={(value) => handleMobilityValueChange("calfRaiseValueLeft", value)}
+              onRightValueChange={(value) => handleMobilityValueChange("calfRaiseValueRight", value)}
+              onLeftScoreChange={(value) => handleMobilityScoreChange("calfRaiseLeft", value)}
+              onRightScoreChange={(value) => handleMobilityScoreChange("calfRaiseRight", value)}
+              symmetry={asymmetryPercent(scores.calfRaiseLeft, scores.calfRaiseRight)}
+              guidance="Repère pratique : 0 < 5 reps · 1 = 5–10 · 2 = 10–15 · 3 = 15–20 · 4 = 20–25 · 5 > 25. Penser aussi à la qualité du mouvement."
+            />
 
-                      <div style={{ gridColumn: "1 / -1", color: Math.abs((leftValue || 0) - (rightValue || 0)) >= 2 ? BRAND.red : BRAND.muted, fontSize: 13, fontWeight: 700 }}>
-                        {symmetryText(leftValue || 0, rightValue || 0)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            <MobilityTestCard
+              title="Short foot test"
+              leftScore={scores.shortFootLeft}
+              rightScore={scores.shortFootRight}
+              leftValue={scores.shortFootValueLeft}
+              rightValue={scores.shortFootValueRight}
+              leftValueLabel="Gauche / observation"
+              rightValueLabel="Droite / observation"
+              leftValuePlaceholder="Ex : maintien 10 s, compensation"
+              rightValuePlaceholder="Ex : bonne activation"
+              onLeftValueChange={(value) => handleMobilityValueChange("shortFootValueLeft", value)}
+              onRightValueChange={(value) => handleMobilityValueChange("shortFootValueRight", value)}
+              onLeftScoreChange={(value) => handleMobilityScoreChange("shortFootLeft", value)}
+              onRightScoreChange={(value) => handleMobilityScoreChange("shortFootRight", value)}
+              symmetry={asymmetryPercent(scores.shortFootLeft, scores.shortFootRight)}
+              guidance="0 impossible · 1 quasi absent / compensation majeure · 2 activation faible / difficile à tenir · 3 activation correcte mais peu stable · 4 bonne activation · 5 excellente activation et maintien"
+            />
+
+            <MobilityTestCard
+              title="Single leg squat"
+              leftScore={scores.singleLegSquatLeft}
+              rightScore={scores.singleLegSquatRight}
+              leftValue={scores.singleLegSquatValueLeft}
+              rightValue={scores.singleLegSquatValueRight}
+              leftValueLabel="Gauche / observation"
+              rightValueLabel="Droite / observation"
+              leftValuePlaceholder="Ex : valgus, perte d’équilibre"
+              rightValuePlaceholder="Ex : bon contrôle"
+              onLeftValueChange={(value) => handleMobilityValueChange("singleLegSquatValueLeft", value)}
+              onRightValueChange={(value) => handleMobilityValueChange("singleLegSquatValueRight", value)}
+              onLeftScoreChange={(value) => handleMobilityScoreChange("singleLegSquatLeft", value)}
+              onRightScoreChange={(value) => handleMobilityScoreChange("singleLegSquatRight", value)}
+              symmetry={asymmetryPercent(scores.singleLegSquatLeft, scores.singleLegSquatRight)}
+              guidance="0 impossible ou douleur · 1 perte d’équilibre immédiate / valgus majeur · 2 possible mais instabilité importante · 3 correct avec défaut visible · 4 bon contrôle global · 5 stable, aligné, contrôlé"
+            />
+
+            <MobilityTestCard
+              title="Single hop test"
+              leftScore={scores.singleHopLeft}
+              rightScore={scores.singleHopRight}
+              leftValue={scores.singleHopValueLeft}
+              rightValue={scores.singleHopValueRight}
+              leftValueLabel="Gauche / observation"
+              rightValueLabel="Droite / observation"
+              leftValuePlaceholder="Ex : réception instable"
+              rightValuePlaceholder="Ex : réception stable"
+              onLeftValueChange={(value) => handleMobilityValueChange("singleHopValueLeft", value)}
+              onRightValueChange={(value) => handleMobilityValueChange("singleHopValueRight", value)}
+              onLeftScoreChange={(value) => handleMobilityScoreChange("singleHopLeft", value)}
+              onRightScoreChange={(value) => handleMobilityScoreChange("singleHopRight", value)}
+              symmetry={asymmetryPercent(scores.singleHopLeft, scores.singleHopRight)}
+              guidance="0 impossible ou douleur · 1 réception non contrôlée · 2 forte instabilité · 3 correct avec défaut visible · 4 bonne réception / légère instabilité · 5 saut et réception stables, dynamiques, contrôlés"
+            />
 
             <div style={{ marginTop: 18, padding: 16, borderRadius: 20, border: `1px solid ${BRAND.border}`, background: "rgba(255,255,255,0.02)" }}>
               <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 10 }}>Score mobilité</div>
