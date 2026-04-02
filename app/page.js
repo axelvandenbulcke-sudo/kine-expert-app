@@ -16,7 +16,7 @@ const BRAND = {
   blue: "#38bdf8",
 };
 
-const APP_KEY = "kine-expert-roubaix-elite-v13";
+const APP_KEY = "kine-expert-roubaix-elite-v14";
 
 const initialPatient = {
   name: "",
@@ -241,6 +241,39 @@ function computeCadenceScore(spm) {
   if (value >= 165) return 2;
   if (value >= 160) return 1;
   return 0;
+}
+
+function scoreAnkleKneeWall(cm) {
+  const v = Number(cm);
+  if (cm === "" || Number.isNaN(v)) return 0;
+  if (v < 5) return 0;
+  if (v < 6) return 1;
+  if (v < 8) return 2;
+  if (v < 10) return 3;
+  if (v < 12) return 4;
+  return 5;
+}
+
+function scoreFingerFloor(cm) {
+  const v = Number(cm);
+  if (cm === "" || Number.isNaN(v)) return 0;
+  if (v > 20) return 0;
+  if (v > 15) return 1;
+  if (v > 10) return 2;
+  if (v > 5) return 3;
+  if (v > 0) return 4;
+  return 5;
+}
+
+function scoreCalfRaise(reps) {
+  const v = Number(reps);
+  if (reps === "" || Number.isNaN(v)) return 0;
+  if (v < 5) return 0;
+  if (v < 10) return 1;
+  if (v < 15) return 2;
+  if (v < 20) return 3;
+  if (v < 25) return 4;
+  return 5;
 }
 
 function computeAnamnesisTotal(patient) {
@@ -929,10 +962,30 @@ export default function RunningClinicElite() {
   };
 
   const handleMobilityValueChange = (key, value) => {
-    setScores((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setScores((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === "ankleKneeWallValueLeft") {
+        next.ankleKneeWallLeft = scoreAnkleKneeWall(value);
+      }
+      if (key === "ankleKneeWallValueRight") {
+        next.ankleKneeWallRight = scoreAnkleKneeWall(value);
+      }
+
+      if (key === "fingerFloorValue") {
+        next.fingerFloor = scoreFingerFloor(value);
+      }
+
+      if (key === "calfRaiseValueLeft") {
+        next.calfRaiseLeft = scoreCalfRaise(value);
+      }
+      if (key === "calfRaiseValueRight") {
+        next.calfRaiseRight = scoreCalfRaise(value);
+      }
+
+      next.mobility = computeMobilityTotal(next);
+      return next;
+    });
   };
 
   const handleMobilityScoreChange = (key, value) => {
